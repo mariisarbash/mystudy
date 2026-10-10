@@ -35,10 +35,13 @@ const errorHandler = (err, req, res, next) => {
     return res.status(413).json({ success: false, error: 'Richiesta troppo grande' });
   }
 
-  console.error(err.stack);
+  // Unexpected failure. Log the detail server-side, but do not echo it to the
+  // client: driver errors embed the connection target, so a database outage
+  // would otherwise disclose the cluster hostname to anyone hitting the API.
+  console.error(err.stack || err);
   return res.status(500).json({
     success: false,
-    error: err.message || 'Errore del server',
+    error: 'Errore del server',
   });
 };
 
