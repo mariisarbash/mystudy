@@ -1,39 +1,39 @@
 const Course = require('../models/Course');
 
 // Prendi tutti i corsi 
-exports.getCourses = async (req, res) => {
+exports.getCourses = async (req, res, next) => {
   try {
     const courses = await Course.find();
     res.json(courses);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 };
 
 // Create a new course
-exports.createCourse = async (req, res) => {
+exports.createCourse = async (req, res, next) => {
   const course = new Course(req.body);
   try {
     const newCourse = await course.save();
     res.status(201).json(newCourse);
   } catch (err) {
-    res.status(400).json({ message: err.message });
+    next(err);
   }
 };
 
 // Get a single course
-exports.getCourse = async (req, res) => {
+exports.getCourse = async (req, res, next) => {
   try {
     const course = await Course.findById(req.params.id);
     if (!course) return res.status(404).json({ message: 'Corso non trovato' });
     res.json(course);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 };
 
 // Update a course
-exports.updateCourse = async (req, res) => {
+exports.updateCourse = async (req, res, next) => {
   try {
     const updatedCourse = await Course.findByIdAndUpdate(
       req.params.id, 
@@ -47,12 +47,12 @@ exports.updateCourse = async (req, res) => {
     
     res.json(updatedCourse);
   } catch (err) {
-    res.status(400).json({ message: err.message });
+    next(err);
   }
 };
 
 // Delete a course
-exports.deleteCourse = async (req, res) => {
+exports.deleteCourse = async (req, res, next) => {
   try {
     const result = await Course.findByIdAndDelete(req.params.id);
     if (!result) {
@@ -60,6 +60,6 @@ exports.deleteCourse = async (req, res) => {
     }
     res.status(200).json({ message: 'Corso eliminato con successo' });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 };

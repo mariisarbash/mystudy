@@ -1,28 +1,28 @@
 const StudySession = require('../models/StudySession');
 
 // Prendi tutte le sessioni di studio 
-exports.getStudySessions = async (req, res) => {
+exports.getStudySessions = async (req, res, next) => {
   try {
     const sessions = await StudySession.find().populate('course');
     res.json(sessions);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 };
 
 // Create a new study session
-exports.createStudySession = async (req, res) => {
+exports.createStudySession = async (req, res, next) => {
   const session = new StudySession(req.body);
   try {
     const newSession = await session.save();
     res.status(201).json(newSession);
   } catch (err) {
-    res.status(400).json({ message: err.message });
+    next(err);
   }
 };
 
 // Delete a study session
-exports.deleteStudySession = async (req, res) => {
+exports.deleteStudySession = async (req, res, next) => {
   try {
     const result = await StudySession.findByIdAndDelete(req.params.id);
     if (!result) {
@@ -30,6 +30,6 @@ exports.deleteStudySession = async (req, res) => {
     }
     res.status(200).json({ message: 'Sessione eliminata con successo' });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 };

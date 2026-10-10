@@ -3,7 +3,7 @@ const Lesson = require('../models/Lesson');
 const Course = require('../models/Course');
 
 // Ottieni tutte le lezioni di un corso 
-exports.getLessonsByCourse = async (req, res) => {
+exports.getLessonsByCourse = async (req, res, next) => {
     try {
       const { courseId } = req.params;
       console.log(`Backend: Richiesta lezioni per il corso: ${courseId}`);
@@ -15,12 +15,12 @@ exports.getLessonsByCourse = async (req, res) => {
       res.json(lessons);
     } catch (error) {
       console.error('Backend error:', error);
-      res.status(500).json({ message: error.message });
+      next(error);
     }
   };
 
 // Crea una nuova lezione
-exports.createLesson = async (req, res) => {
+exports.createLesson = async (req, res, next) => {
   try {
     console.log('Tentativo di creazione lezione:', {
       courseId: req.params.courseId,
@@ -46,12 +46,12 @@ exports.createLesson = async (req, res) => {
     res.status(201).json(newLesson);
   } catch (error) {
     console.error('Errore creazione lezione:', error);
-    res.status(400).json({ message: error.message });
+    next(error);
   }
 };
 
 // Aggiorna una lezione
-exports.updateLesson = async (req, res) => {
+exports.updateLesson = async (req, res, next) => {
   try {
     const updatedLesson = await Lesson.findByIdAndUpdate(
       req.params.id,
@@ -60,12 +60,12 @@ exports.updateLesson = async (req, res) => {
     );
     res.json(updatedLesson);
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    next(error);
   }
 };
 
 // Elimina una lezione
-exports.deleteLesson = async (req, res) => {
+exports.deleteLesson = async (req, res, next) => {
   try {
     await Lesson.findByIdAndDelete(req.params.id);
     
@@ -76,6 +76,6 @@ exports.deleteLesson = async (req, res) => {
     
     res.json({ message: 'Lezione eliminata' });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    next(error);
   }
 };

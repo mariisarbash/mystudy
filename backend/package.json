@@ -1,0 +1,17 @@
+{
+  "name": "mystudy-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MyStudy REST API — courses, lessons, syllabus topics and study sessions.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "mongoose": "^8.15.0"
+  }
+}

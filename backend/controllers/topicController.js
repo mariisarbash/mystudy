@@ -2,17 +2,17 @@ const Topic = require('../models/Topic');
 const Course = require('../models/Course');
 
 // Ottieni tutti i topic di un corso - per il programma 
-exports.getTopicsByCourse = async (req, res) => {
+exports.getTopicsByCourse = async (req, res, next) => {
   try {
     const topics = await Topic.find({ courseId: req.params.courseId });
     res.json(topics);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    next(error);
   }
 };
 
 // Crea un nuovo topic
-exports.createTopic = async (req, res) => {
+exports.createTopic = async (req, res, next) => {
   try {
     console.log('Tentativo di creazione topic:', {
       courseId: req.params.courseId,
@@ -37,12 +37,12 @@ exports.createTopic = async (req, res) => {
     res.status(201).json(newTopic);
   } catch (error) {
     console.error('Errore creazione topic:', error);
-    res.status(400).json({ message: error.message });
+    next(error);
   }
 };
 
 // Aggiorna un topic
-exports.updateTopic = async (req, res) => {
+exports.updateTopic = async (req, res, next) => {
   try {
     const updatedTopic = await Topic.findByIdAndUpdate(
       req.params.id,
@@ -51,12 +51,12 @@ exports.updateTopic = async (req, res) => {
     );
     res.json(updatedTopic);
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    next(error);
   }
 };
 
 // Elimina un topic
-exports.deleteTopic = async (req, res) => {
+exports.deleteTopic = async (req, res, next) => {
   try {
     await Topic.findByIdAndDelete(req.params.id);
     
@@ -67,12 +67,12 @@ exports.deleteTopic = async (req, res) => {
     
     res.json({ message: 'Topic eliminato' });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    next(error);
   }
 };
 
 // Genera argomenti automaticamente dal programma
-exports.generateTopics = async (req, res) => {
+exports.generateTopics = async (req, res, next) => {
   try {
     const { courseId } = req.params;
     const { programText } = req.body;
@@ -102,6 +102,6 @@ exports.generateTopics = async (req, res) => {
     
     res.status(201).json(topics);
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    next(error);
   }
 };

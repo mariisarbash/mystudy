@@ -1,17 +1,47 @@
 const mongoose = require('mongoose');
 require('dotenv').config();
 
+const MONGODB_URI =
+  process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/mystudy';
+
+/**
+ * Connects to MongoDB, reusing the connection across calls.
+ *
+ * The cache matters in a serverless environment: each warm invocation re-runs
+ * module code, and opening a new connection every time exhausts the database's
+ * connection limit. Caching on globalThis survives between invocations in the
+ * same container.
+ */
+let cached = globalThis.__mystudyMongoose;
+if (!cached) {
+  cached = globalThis.__mystudyMongoose = { conn: null, promise: null };
+}
+
 const connectDB = async () => {
-  try {
-    await mongoose.connect('mongodb://localhost:27017/uniassistant', {
-      useNewUrlParser: true,
-      useUnifiedTopology: true
-    });
-    console.log('Connessione a MongoDB completata con successo');
-  } catch (err) {
-    console.error('Errore di connessione a MongoDB:', err);
-    process.exit(1);
+  if (cached.conn) return cached.conn;
+
+  if (!cached.promise) {
+    cached.promise = mongoose
+      .connect(MONGODB_URI, {
+        // Fail fast instead of hanging a request for 30s when the database
+        // is unreachable.
+        serverSelectionTimeoutMS: 10000,
+      })
+      .then((m) => {
+        // Log the database name only — never the URI, which may carry credentials.
+        console.log(`MongoDB connected (db: ${m.connection.name})`);
+        return m;
+      });
   }
+
+  try {
+    cached.conn = await cached.promise;
+  } catch (err) {
+    cached.promise = null;
+    throw err;
+  }
+
+  return cached.conn;
 };
 
 module.exports = connectDB;
