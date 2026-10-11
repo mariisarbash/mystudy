@@ -5,7 +5,7 @@ import { FaClock, FaRegLightbulb, FaTint, FaClipboardList, FaPlus } from 'react-
 import axios from '../services/api';
 import Onboarding from './Onboarding';
 import SyllabusImportModal from './SyllabusImportModal';
-import { courseIdOf, courseOf } from '../utils/sessions';
+import { courseIdOf, courseOf, isRecorded, splitByTime, totalMinutes } from '../utils/sessions';
 import './dashboard.css';
 
 function Dashboard() {
@@ -79,15 +79,24 @@ function Dashboard() {
 
   const nameOfCourse = (session) => courseOf(session, courses)?.name || 'Corso non specificato';
 
-  // Study time per course. `courseIdOf` is what makes this work at all: the
-  // API populates `session.course` into an object, and the old `===` test
-  // against an id string meant every course showed 0 minuti / 0 sessioni.
+  /*
+    Study time counts past-dated sessions only. A study session carries no
+    completion flag, so a session booked for next week used to be added to
+    "tempo di studio" the moment it was saved, as if it had already happened.
+    Planned time is reported separately, below the card.
+  */
+  const { recorded: recordedSessions, planned: plannedSessions } = splitByTime(sessions);
+  const plannedMinutes = totalMinutes(plannedSessions);
+
+  // `courseIdOf` is what makes this work at all: the API populates
+  // `session.course` into an object, and the old `===` test against an id
+  // string meant every course showed 0 minuti / 0 sessioni.
   const studyTime = courses
     .map((course) => {
-      const own = sessions.filter((s) => courseIdOf(s) === course._id);
+      const own = recordedSessions.filter((s) => courseIdOf(s) === course._id);
       return {
         ...course,
-        totalMinutes: own.reduce((t, s) => t + (s.duration || 0), 0),
+        totalMinutes: totalMinutes(own),
         sessionsCount: own.length,
       };
     })
@@ -225,7 +234,14 @@ function Dashboard() {
                       </div>
                       <div className="schedule-cell" data-label="Stato">
                         <span className="schedule-value">
-                          <span className="status-badge pending">In programma</span>
+                          {/* Today's list spans both halves of the day, so the
+                              badge follows the clock rather than labelling an
+                              8:00 slot "In programma" at six in the evening. */}
+                          {isRecorded(session) ? (
+                            <span className="status-badge recorded">Registrata</span>
+                          ) : (
+                            <span className="status-badge pending">In programma</span>
+                          )}
                         </span>
                       </div>
                     </div>
@@ -354,7 +370,7 @@ function Dashboard() {
 
           <Card className="mb-4 shadow-sm">
             <Card.Header>
-              <h2 className="h6 m-0">Tempo di studio per corso</h2>
+              <h2 className="h6 m-0">Tempo registrato per corso</h2>
             </Card.Header>
             <Card.Body className="p-0">
               {studyTime.length > 0 ? (
@@ -386,13 +402,24 @@ function Dashboard() {
                 </div>
               ) : (
                 <div className="empty-courses">
-                  <p className="mb-2">Non hai ancora registrato sessioni di studio.</p>
+                  <p className="mb-2">
+                    Non hai ancora sessioni con una data passata da registrare.
+                  </p>
                   <Link to="/study-sessions" className="btn btn-sm btn-primary">
                     Registra una sessione
                   </Link>
                 </div>
               )}
             </Card.Body>
+            {plannedMinutes > 0 && (
+              <Card.Footer className="card-footnote">
+                In più hai {formatMinutes(plannedMinutes)} di studio pianificato in{' '}
+                {plannedSessions.length === 1
+                  ? '1 sessione futura'
+                  : `${plannedSessions.length} sessioni future`}
+                , non conteggiato qui sopra.
+              </Card.Footer>
+            )}
           </Card>
 
           {/*

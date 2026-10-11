@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { FaTrash, FaRegClock } from 'react-icons/fa';
 import './studySessions.css';
 import { api } from '../services/api';
-import { courseOf } from '../utils/sessions';
+import { courseOf, isRecorded } from '../utils/sessions';
 
 const emptySession = () => ({
   course: '',
@@ -302,6 +302,11 @@ function StudySessions() {
                           <h3 className="session-title">{session.topic || 'Sessione di studio'}</h3>
                           <p className="session-course">{course?.name || 'Corso non specificato'}</p>
                           <p className="session-duration">{session.duration} minuti</p>
+                          {/* Statistics report planned and recorded time apart,
+                              so the list says which of the two a card is. */}
+                          {!isRecorded(session) && (
+                            <p className="session-planned">In programma, non ancora svolta</p>
+                          )}
                           {session.notes && <p className="session-notes">{session.notes}</p>}
                         </div>
                         <div className="session-actions">

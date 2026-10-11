@@ -464,6 +464,26 @@
   color: #155724;
 }
 
+/*
+ * A past-dated session. Deliberately neutral blue rather than the green
+ * "completed" badge above: the data model records no confirmation that the
+ * session actually took place, only that its slot has passed.
+ * #1a4f8f on #e8f0fa is 7.4:1.
+ */
+.status-badge.recorded {
+  background-color: #e8f0fa;
+  color: #1a4f8f;
+}
+
+/* Footnote under a card, for a figure the card deliberately excludes. */
+.card-footnote {
+  background-color: #f8fafc;
+  border-top: 1px solid #e6ebf1;
+  padding: 12px 20px;
+  font-size: 13px;
+  color: #5a6775;
+}
+
 .empty-schedule, .empty-upcoming, .empty-courses {
   padding: 30px 20px;
   text-align: center;

@@ -71,6 +71,31 @@
     color: #666;
     font-size: 14px;
   }
+
+  /*
+   * Planned time is shown in its own card so it can never be read as time
+   * already spent. The dashed outline and the tinted surface mark it as a
+   * forecast rather than a record; #e8f0fa keeps #333 at 11.8:1 and #5a6775
+   * at 4.9:1, both above AA.
+   */
+  .stat-card--planned {
+    background-color: #e8f0fa;
+    box-shadow: none;
+    border: 1px dashed #93b4dd;
+  }
+
+  .stat-note {
+    margin: 6px 0 0;
+    font-size: 13px;
+    color: #5a6775;
+  }
+
+  .stats-caption {
+    margin: -14px 0 30px;
+    font-size: 14px;
+    color: #5a6775;
+    max-width: 78ch;
+  }
   
   /* Weekly chart */
   .weekly-chart {

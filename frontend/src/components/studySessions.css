@@ -138,6 +138,21 @@
     margin-bottom: 10px;
   }
   
+  /*
+   * A future-dated session. Same pill shape as the duration, in a neutral
+   * amber rather than a green "done" colour: nothing in the data confirms a
+   * session was carried out. #7a5300 on #fff6e0 is 6.4:1.
+   */
+  .session-planned {
+    display: inline-block;
+    background-color: #fff6e0;
+    color: #7a5300;
+    font-size: 13px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    margin: 0 0 10px 8px;
+  }
+
   .session-notes {
     margin: 10px 0 0;
     font-size: 14px;

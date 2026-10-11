@@ -3,14 +3,16 @@ import { Link } from 'react-router-dom';
 import { FaChartBar, FaRegClock, FaBookOpen } from 'react-icons/fa';
 import './Statistics.css';
 import { api } from '../services/api';
-import { courseIdOf } from '../utils/sessions';
+import { courseIdOf, splitByTime, totalMinutes } from '../utils/sessions';
 
 function Statistics() {
   const [stats, setStats] = useState({
-    totalSessions: 0,
-    totalMinutes: 0,
+    recordedCount: 0,
+    recordedMinutes: 0,
+    plannedCount: 0,
+    plannedMinutes: 0,
     courseStats: [],
-    lastWeekSessions: [],
+    lastWeekSessions: { labels: [], data: [] },
     dailyAverage: 0
   });
   const [loading, setLoading] = useState(true);
@@ -24,8 +26,20 @@ function Statistics() {
     api.get('/api/study-sessions')
       .then(response => response.json())
       .then(sessions => {
-        // Filter sessions by time range if needed
-        const filteredSessions = filterSessionsByTimeRange(sessions, timeRange);
+        /*
+          Recorded (past-dated) and planned (future-dated) sessions are kept
+          apart from here on. A study session has no completion flag, so every
+          number below that describes time spent is built from past-dated
+          records only; future sessions are reported separately as plans.
+
+          The time-range selector is retrospective, so it filters the recorded
+          half only. Upcoming sessions are counted in full whatever range is
+          selected — filtering next month's plan out of "ultima settimana"
+          would quietly hide it.
+        */
+        const now = Date.now();
+        const { recorded: allRecorded, planned } = splitByTime(sessions, now);
+        const recorded = filterSessionsByTimeRange(allRecorded, timeRange);
         
         // Fetch all courses
         api.get('/api/courses')
@@ -43,20 +57,14 @@ function Statistics() {
               };
             });
             
-            // Calculate statistics
-            let totalMinutes = 0;
-            
-            filteredSessions.forEach(session => {
-              const duration = session.duration || 0;
-              totalMinutes += duration;
-
+            recorded.forEach(session => {
               // `session.course` is populated into an object by the API, so
               // indexing the map with it directly produced the key
               // "[object Object]" and never matched: "Distribuzione del tempo
               // per corso" was permanently empty.
               const id = courseIdOf(session);
               if (id && coursesMap[id]) {
-                coursesMap[id].minutes += duration;
+                coursesMap[id].minutes += session.duration || 0;
                 coursesMap[id].sessions += 1;
               }
             });
@@ -64,18 +72,14 @@ function Statistics() {
             const courseStatsArray = Object.values(coursesMap).filter(course => course.minutes > 0);
             courseStatsArray.sort((a, b) => b.minutes - a.minutes);
             
-            // Calculate last 7 days data
-            const last7Days = getLast7DaysData(filteredSessions);
-            
-            // Calculate daily average
-            const dailyAverage = calculateDailyAverage(filteredSessions);
-            
             setStats({
-              totalSessions: filteredSessions.length,
-              totalMinutes: totalMinutes,
+              recordedCount: recorded.length,
+              recordedMinutes: totalMinutes(recorded),
+              plannedCount: planned.length,
+              plannedMinutes: totalMinutes(planned),
               courseStats: courseStatsArray,
-              lastWeekSessions: last7Days,
-              dailyAverage: dailyAverage
+              lastWeekSessions: getLast7DaysData(recorded),
+              dailyAverage: calculateDailyAverage(recorded)
             });
             
             setLoading(false);
@@ -172,10 +176,7 @@ function Statistics() {
     // Calculate the number of days
     const daysDiff = Math.max(1, Math.floor((latestDate - earliestDate) / (1000 * 60 * 60 * 24)) + 1);
     
-    // Calculate total minutes
-    const totalMinutes = sessions.reduce((total, session) => total + (session.duration || 0), 0);
-    
-    return Math.round(totalMinutes / daysDiff);
+    return Math.round(totalMinutes(sessions) / daysDiff);
   };
 
   const formatTime = (minutes) => {
@@ -192,7 +193,7 @@ function Statistics() {
   };
   
   const calculatePercentage = (courseMinutes) => {
-    return stats.totalMinutes > 0 ? (courseMinutes / stats.totalMinutes) * 100 : 0;
+    return stats.recordedMinutes > 0 ? (courseMinutes / stats.recordedMinutes) * 100 : 0;
   };
 
   if (loading) {
@@ -206,7 +207,7 @@ function Statistics() {
     return (
       <figure className="weekly-chart">
         <figcaption>
-          <h3>Minuti di studio negli ultimi 7 giorni</h3>
+          <h3>Minuti registrati negli ultimi 7 giorni</h3>
         </figcaption>
         <div className="chart-container">
           {stats.lastWeekSessions.data.map((value, index) => (
@@ -240,6 +241,8 @@ function Statistics() {
     );
   };
 
+  const hasAnySession = stats.recordedCount > 0 || stats.plannedCount > 0;
+
   return (
     <div className="statistics-container">
       <div className="container">
@@ -265,7 +268,7 @@ function Statistics() {
           </div>
         </div>
 
-        {stats.totalSessions === 0 ? (
+        {!hasAnySession ? (
           /*
             First-use state. It describes the three views this page builds
             once there is data; it deliberately shows no numbers, no sample
@@ -290,11 +293,11 @@ function Statistics() {
             <ul className="stats-empty__list">
               <li>
                 <FaRegClock aria-hidden="true" />
-                <span>Il tempo totale dedicato allo studio e la media giornaliera</span>
+                <span>Il tempo registrato e la media giornaliera</span>
               </li>
               <li>
                 <FaChartBar aria-hidden="true" />
-                <span>L’andamento dei minuti di studio negli ultimi 7 giorni</span>
+                <span>L’andamento dei minuti registrati negli ultimi 7 giorni</span>
               </li>
               <li>
                 <FaBookOpen aria-hidden="true" />
@@ -310,25 +313,56 @@ function Statistics() {
           <>
             <div className="stats-overview">
               <div className="stat-card">
-                <div className="stat-value">{stats.totalSessions}</div>
-                <div className="stat-label">Sessioni totali</div>
+                <div className="stat-value">{stats.recordedCount}</div>
+                <div className="stat-label">Sessioni registrate</div>
               </div>
               <div className="stat-card">
-                <div className="stat-value">{formatTime(stats.totalMinutes)}</div>
-                <div className="stat-label">Tempo totale studiato</div>
+                <div className="stat-value">{formatTime(stats.recordedMinutes)}</div>
+                <div className="stat-label">Tempo registrato</div>
               </div>
               <div className="stat-card">
                 <div className="stat-value">{formatTime(stats.dailyAverage)}</div>
-                <div className="stat-label">Media giornaliera</div>
+                <div className="stat-label">Media giornaliera del tempo registrato</div>
               </div>
+
+              {/* Shown only when there is something planned, so the page never
+                  displays an invented "0" alongside the real numbers. */}
+              {stats.plannedCount > 0 && (
+                <div className="stat-card stat-card--planned">
+                  <div className="stat-value">{formatTime(stats.plannedMinutes)}</div>
+                  <div className="stat-label">Tempo pianificato</div>
+                  <p className="stat-note">
+                    {stats.plannedCount === 1
+                      ? '1 sessione futura in calendario'
+                      : `${stats.plannedCount} sessioni future in calendario`}
+                  </p>
+                </div>
+              )}
             </div>
 
-            {renderWeeklyChart()}
+            {/*
+              The honest caveat. These totals are built from the session date,
+              which is the only signal the data model has: there is no field
+              recording whether a session was actually carried out.
+            */}
+            <p className="stats-caption">
+              Il <strong>tempo registrato</strong> somma le sessioni con una data già
+              passata, il <strong>tempo pianificato</strong> quelle con una data futura.
+              MyStudy non tiene traccia di quali sessioni siano state davvero svolte, per
+              cui una sessione passata resta un’annotazione, non una conferma.
+            </p>
+
+            {stats.recordedCount > 0 && renderWeeklyChart()}
 
             <div className="course-stats">
-              <h2 className="h5">Distribuzione del tempo per corso</h2>
+              <h2 className="h5">Distribuzione del tempo registrato per corso</h2>
 
-              {stats.courseStats.length === 0 ? (
+              {stats.recordedCount === 0 ? (
+                <p className="text-body-secondary mb-0">
+                  Non hai ancora sessioni con una data passata: per ora c’è solo tempo
+                  pianificato.
+                </p>
+              ) : stats.courseStats.length === 0 ? (
                 <p className="text-body-secondary mb-0">
                   Le sessioni registrate non sono collegate a nessun corso esistente.
                 </p>
@@ -350,7 +384,7 @@ function Statistics() {
                       <div
                         className="progress-bar-container"
                         role="progressbar"
-                        aria-label={`Quota di tempo dedicata a ${course.name}`}
+                        aria-label={`Quota di tempo registrato per ${course.name}`}
                         aria-valuenow={Number(percent.toFixed(1))}
                         aria-valuemin={0}
                         aria-valuemax={100}
