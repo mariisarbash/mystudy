@@ -1,17 +1,30 @@
-# MyStudy — turning a university syllabus into a trackable study plan
+# MyStudy — rethinking how students plan for multiple exams
 
-> Student product project · Politecnico di Milano · **June 2025**
-> By **Mariia Sarbash** — research, product concept and initial UX with **Matteo Soccali**
-> Presented at Bending Spoons HQ, Milan, on **25 June 2025**, through the CSI / Passion in Action initiative
+**Student product project · Politecnico di Milano · June 2025**
 
-MyStudy began with a question we put to around 200 university students in Milan: what is actually
-hardest about student life? Nearly half gave the same answer — organising time across lectures,
-study and a personal life. MyStudy was our answer to it: paste the syllabus of a course, get an
-ordered checklist of its topics, and always know how much is left before the exam.
+**By Mariia Sarbash** — application, presentation and delivery.
+Research, product concept and initial UX developed jointly with **Matteo Soccali**.
+
+Presented at **Bending Spoons HQ**, Milan, on **25 June 2025**, through the
+CSI / Passion in Action initiative at Politecnico di Milano.
+
+---
+
+MyStudy started from a challenge familiar to many university students: preparing for several exams
+at the same time without a clear understanding of how much work each one requires, or how to
+distribute that work around classes and personal commitments.
+
+We investigated the problem through a survey of approximately 200 university students in Milan. Our
+product vision was an intelligent study-planning assistant that could analyse the materials a
+student chose to provide across different courses, estimate the workload, and create a realistic
+plan adapted to exam dates, priorities and available time.
+
+The first full-stack prototype implemented a smaller foundation of that vision: organising courses
+and topics, tracking progress, and recording study sessions.
 
 📄 **[Read the original pitch deck — 25 June 2025](docs/mystudy-pitch-june-2025.pdf)** (12 slides, in Italian)
 
-![The syllabus of a course, turned into a checklist](docs/screenshots/01-syllabus-checklist.png)
+![A course's topics, with progress tracked against them](docs/screenshots/01-syllabus-checklist.png)
 
 > **About this repository.** This is a historical portfolio piece, preserved rather than
 > modernised. The interface is in Italian, for Italian university students. The README is in
@@ -21,13 +34,18 @@ ordered checklist of its topics, and always know how much is left before the exa
 
 ## The problem
 
-University students in Italy receive a course *programma* — a wall of text on a department web page
-listing everything an exam can cover. It is the single most important document of the semester, and
-it is almost impossible to work with: there is no way to see how much of it is done, how much is
-left, or whether you are on track.
+Preparing for several university exams is not simply a matter of finding time to study. Each course
+comes with its own material, topics, deadlines and level of difficulty, and students often do not
+know in advance how much time each exam will require.
 
-Students compensate with notebooks, spreadsheets and anxiety. That was the problem we set out to
-investigate — not a technology looking for a use.
+A student has to decide what to study, when to study it, how much attention to give each subject,
+and how to adjust those choices when other commitments or priorities change.
+
+Without a unified view of the workload across all courses, it is difficult to build a realistic
+plan rather than treating every exam in isolation.
+
+That was the problem we wanted to understand and eventually help students solve — not a technology
+looking for a use.
 
 ## Research & discovery
 
@@ -45,17 +63,27 @@ tells me exactly what I have to do during the week so I don't fall behind — ta
 account too, I don't want to study until the middle of the night"* (translated from the Italian
 original quoted in the presentation).
 
-So: a quantified problem, a quantified urgency, and a quantified preferred solution.
+Taken together: a quantified problem, a quantified urgency, and a clear signal about the kind of
+help students wanted — planning their study, across everything they had to prepare, rather than
+any particular interface for doing it. That is the direction the product concept below follows.
 
 *All figures are as reported in our June 2025 presentation. This was a student survey, not an
-audited study, and the sample was a convenience sample of students we could reach.*
+audited study, and the sample was a convenience sample of students we could reach. It tells us
+what students said their problem was; it does not, on its own, validate any specific feature.*
 
 ## The product concept
 
-Take the one document every student already has — the syllabus — and make it operable. Paste it in,
-and the app turns it into a list of topics you tick off as you study them, with progress visible per
-course. Around that: lessons, study sessions, a calendar and a Pomodoro timer, so the tracking lives
-where the studying happens.
+The proposed MyStudy assistant would bring together the information a student chose to give it
+about their courses, materials, exams and availability. Instead of planning each exam separately,
+it would consider the overall academic workload: estimating what needed to be studied, assigning
+priorities, and proposing a realistic study schedule.
+
+The plan was meant to adapt — to different exam dates, to personal commitments, and to the
+student's progress over time.
+
+**That is the concept. None of it was built.** For the first prototype we implemented a narrower set
+of supporting features: course management, pasted syllabi converted into topic checklists, visible
+progress, study sessions, a calendar and a Pomodoro timer.
 
 ## What was actually built
 
@@ -95,9 +123,14 @@ lines, trims each remaining line and saves it as one topic, in order. **One line
 topic** — that is the whole algorithm, and you can read it in
 [`backend/controllers/topicController.js`](backend/controllers/topicController.js).
 
-The prototype proved the part the research had actually validated: turning an unmanageable wall of
-text into something a student can tick off. The deck is published here unedited, AI slides included,
-because a product vision that outran a first prototype is a normal and honest part of the story.
+What the prototype did was take on the part of the vision that was achievable in the time
+available, and build the structures the larger idea would have needed anyway: courses, their
+topics, progress against them, and time recorded against each one. It is a foundation, not a
+demonstration that the concept works — nothing here tested whether an automatically generated,
+multi-exam study plan would actually help a student.
+
+The deck is published unedited, AI slides included, because a product vision that outran a first
+prototype is a normal and honest part of the story.
 
 ## Architecture & technology
 
@@ -166,8 +199,8 @@ it is precisely so the distance between the two is visible.
 
 ## Limitations
 
-- The AI planning described in the presentation was never implemented. The importer is a
-  deterministic line split.
+- The core of the concept — analysing study materials and generating a plan across several exams —
+  was never implemented. The importer is a deterministic line split.
 - Study sessions have no completion state. The app distinguishes **recorded** time (sessions dated
   in the past) from **planned** time (sessions dated in the future) and labels the two separately,
   but it cannot know whether a session actually took place.
