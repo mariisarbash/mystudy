@@ -42,7 +42,8 @@ across Politecnico di Milano, Bocconi, Statale and Cattolica.
 
 The open-ended answers all converged on the same need. One respondent asked for *"a planner that
 tells me exactly what I have to do during the week so I don't fall behind — taking my wellbeing into
-account too, I don't want to study until the middle of the night."*
+account too, I don't want to study until the middle of the night"* (translated from the Italian
+original quoted in the presentation).
 
 So: a quantified problem, a quantified urgency, and a quantified preferred solution.
 
