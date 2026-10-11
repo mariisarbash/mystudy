@@ -1,66 +1,119 @@
 .course-detail-container {
-  padding: 30px 0;
+  padding: 24px 0 40px;
 }
 
 .course-header {
   border-radius: 12px;
   padding: 24px;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
   color: white;
   position: relative;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-.course-header h2 {
-  font-size: 1.8rem;
+.course-header__title {
+  color: #fff;
+  font-size: clamp(1.4rem, 4vw, 1.8rem);
   margin-bottom: 0;
   font-weight: 600;
+  overflow-wrap: break-word;
 }
 
 .course-meta {
-  margin-top: 10px;
-  opacity: 0.9;
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+}
+
+.course-meta__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  /* No opacity wash here: the header colour is already darkened to exactly
+     the AA threshold for white text, so dimming the text pushes it back
+     under. */
 }
 
 .back-button {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 20px;
-  color: #666;
+  margin-bottom: 16px;
+  /* #4a5664 on the #f5f7fa page background is 7.4:1. */
+  color: #4a5664;
   text-decoration: none;
   font-weight: 500;
-  transition: all 0.2s;
+  transition: color 0.2s;
 }
 
-.back-button:hover {
-  color: #333;
+.back-button:hover,
+.back-button:focus {
+  color: #1a4f8f;
 }
 
-.nav-tabs {
-  border-bottom: 1px solid #e5e5e5;
+/* ── Tabs ────────────────────────────────────────────────────────────────── */
+
+/*
+ * These tabs were invisible before: header.css styled the global Bootstrap
+ * class `.nav-link` with `color: white !important`, which also applied here,
+ * painting "Lezioni" and "Programma" white on a white tab strip. That rule is
+ * now scoped to the header, and these selectors carry enough specificity to
+ * beat bootstrap.min.css, which main.jsx imports last.
+ *
+ * Contrast on #f5f7fa: inactive #46505c = 8.0:1, active #1a4f8f = 7.0:1.
+ */
+.course-detail-container .course-tabs {
+  border-bottom: 1px solid #dde3ea;
   margin-bottom: 24px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: thin;
 }
 
-.nav-tabs .nav-link {
+.course-detail-container .course-tabs .nav-link {
   border: none;
-  border-bottom: 2px solid transparent;
-  color: #666;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+  background: none;
+  color: #46505c;
   font-weight: 500;
-  padding: 10px 16px;
+  padding: 12px 18px;
+  white-space: nowrap;
 }
 
-.nav-tabs .nav-link:hover {
-  border-color: transparent;
+.course-detail-container .course-tabs .nav-link:hover {
+  border-color: transparent transparent #b9c6d6;
+  color: #1a4f8f;
+  background-color: rgba(42, 102, 179, 0.05);
 }
 
-.nav-tabs .nav-link.active {
-  border-color: #3a7bd5;
-  color: #3a7bd5;
+/* The selected tab is marked by weight and an underline as well as colour. */
+.course-detail-container .course-tabs .nav-link.active {
+  border-color: transparent transparent #1a4f8f;
+  color: #1a4f8f;
+  font-weight: 700;
   background-color: transparent;
 }
 
-/* Stats card */
+.course-detail-container .course-tabs .nav-link:focus-visible {
+  outline: 3px solid #1a4f8f;
+  outline-offset: -3px;
+}
+
+/* The panel is focusable so the tab order continues into its content. */
+.course-tabpanel:focus {
+  outline: none;
+}
+
+.course-tabpanel:focus-visible {
+  outline: 3px solid #1a4f8f;
+  outline-offset: 4px;
+  border-radius: 6px;
+}
+
+/* ── Stats card ──────────────────────────────────────────────────────────── */
+
 .stats-card {
   background-color: white;
   border-radius: 12px;
@@ -88,32 +141,32 @@
 .stat-value {
   font-size: 28px;
   font-weight: 700;
-  color: #3a7bd5;
+  color: #1a4f8f;
   margin-bottom: 4px;
 }
 
-.text-muted {
-  color: #6c757d !important;
-}
+/* ── Progress ────────────────────────────────────────────────────────────── */
 
-/* Progress bar */
-.progress {
-  height: 8px;
-  border-radius: 4px;
+.course-detail-container .progress {
+  height: 10px;
+  border-radius: 5px;
   margin-top: 15px;
-  background-color: #f0f0f0;
+  background-color: #e9edf2;
 }
 
-.progress-bar {
-  background-color: #3a7bd5;
-  border-radius: 4px;
+.course-detail-container .progress-bar {
+  background-color: #2a66b3;
+  border-radius: 5px;
 }
 
-/* Section headers */
+/* ── Section headers ─────────────────────────────────────────────────────── */
+
 .section-header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
   margin-bottom: 16px;
 }
 
@@ -123,59 +176,151 @@
   margin: 0;
 }
 
-/* Lessons and topics list */
-.list-group-item {
-  padding: 16px;
+/* ── List rows (lessons and topics) ──────────────────────────────────────── */
+
+.course-detail-container .list-group-item {
+  padding: 14px 16px;
   border-left: none;
   border-right: none;
-  display: flex;
-  align-items: center;
-  transition: all 0.2s;
+  transition: background-color 0.2s;
 }
 
-.list-group-item:hover {
+.course-detail-container .list-group-item:hover {
   background-color: #f8f9fa;
 }
 
-.list-group-item:first-child {
+.course-detail-container .list-group-item:first-child {
   border-top: none;
 }
 
-.checkbox-container {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  border: 2px solid #ddd;
+/*
+ * The completion toggle. This used to be a <div onClick>: not reachable by
+ * keyboard and invisible to assistive technology. It is now a real <button>
+ * with aria-pressed, styled to look the same.
+ */
+.toggle-done {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-right: 15px;
+  border-radius: 50%;
+  border: 2px solid #9aa7b5;
+  background-color: transparent;
+  color: transparent;
   cursor: pointer;
-  flex-shrink: 0;
-  transition: all 0.2s;
+  transition: background-color 0.15s, border-color 0.15s;
 }
 
-.checkbox-container.checked {
-  background-color: #4CAF50;
-  border-color: #4CAF50;
-  color: white;
+.toggle-done:hover {
+  border-color: #2a66b3;
+  background-color: rgba(42, 102, 179, 0.08);
 }
 
-.lesson-content {
-  flex-grow: 1;
+.toggle-done[aria-pressed='true'] {
+  background-color: #1d7a38;
+  border-color: #1d7a38;
+  color: #fff;
 }
 
-.lesson-title {
-  margin: 0 0 4px 0;
-  transition: all 0.2s;
+.toggle-done:focus-visible {
+  outline: 3px solid #1a4f8f;
+  outline-offset: 2px;
 }
 
-.text-decoration-line-through {
+.item-title {
+  margin: 0 0 2px 0;
+  font-size: 1rem;
+  font-weight: 600;
+  overflow-wrap: break-word;
+}
+
+.is-done .item-title {
   text-decoration: line-through;
-  opacity: 0.6;
+  /* #5f6b78 keeps completed items at 6.1:1 — de-emphasised but still
+     readable, unlike a 0.6 opacity wash. */
+  color: #5f6b78;
+  font-weight: 500;
 }
 
-.lesson-notes {
+.item-notes {
   font-size: 14px;
-  color: #6c757d;
+  color: #5a6775;
+  overflow-wrap: break-word;
+}
+
+/* Row layout: content takes the space, controls never shrink or wrap off the
+   edge. At 320px the old fixed row pushed the delete button past the screen. */
+.item-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.item-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+.item-body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.item-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  /* Top-aligned with the title rather than stretched to the row height, so
+     the buttons do not float below the text they belong to. */
+  align-self: flex-start;
+  margin-left: auto;
+}
+
+/* Empty-state icon for the "paste the syllabus" prompt. */
+.syllabus-cta__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  border-radius: 16px;
+  background-color: rgba(42, 102, 179, 0.1);
+  color: #2a66b3;
+}
+
+.icon-button {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+@media (max-width: 575.98px) {
+  .course-detail-container {
+    padding-top: 16px;
+  }
+
+  .course-header {
+    padding: 18px;
+  }
+
+  .course-detail-container .course-tabs .nav-link {
+    padding: 12px 14px;
+  }
+
+  /* Controls move to their own full-width row rather than competing with the
+     title for horizontal space. */
+  .item-controls {
+    margin-left: 38px;
+  }
 }

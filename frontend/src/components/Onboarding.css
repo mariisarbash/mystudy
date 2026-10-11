@@ -1,0 +1,153 @@
+/* First-run guidance shown while the workspace is still empty. */
+
+.onboarding {
+  display: grid;
+  gap: 28px;
+  margin-bottom: 32px;
+}
+
+.onboarding__intro {
+  background: linear-gradient(135deg, #2a66b3, #3a7bd5);
+  color: #fff;
+  border-radius: 16px;
+  padding: 40px;
+  box-shadow: 0 10px 30px rgba(42, 102, 179, 0.22);
+}
+
+.onboarding__eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.78rem;
+  font-weight: 700;
+  /* Deliberately not rgba-dimmed below AA: 0.85 white on this blue stays
+     above 4.5:1. */
+  opacity: 0.85;
+  margin: 0 0 10px;
+}
+
+.onboarding__title {
+  color: #fff;
+  font-size: clamp(1.5rem, 4.2vw, 2.1rem);
+  font-weight: 700;
+  line-height: 1.25;
+  margin: 0 0 14px;
+  max-width: 22ch;
+}
+
+.onboarding__lead {
+  font-size: clamp(0.98rem, 2.4vw, 1.08rem);
+  line-height: 1.6;
+  margin: 0 0 24px;
+  max-width: 60ch;
+}
+
+.onboarding__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+/* White button on the blue panel, so the primary action stays the most
+   prominent thing on the screen. */
+.onboarding__actions .btn-primary {
+  background-color: #fff;
+  border-color: #fff;
+  color: #1a4f8f;
+  font-weight: 600;
+}
+
+.onboarding__actions .btn-primary:hover,
+.onboarding__actions .btn-primary:focus {
+  background-color: #eef4fd;
+  border-color: #eef4fd;
+  color: #1a4f8f;
+}
+
+.onboarding__actions .btn-primary:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 3px;
+}
+
+.onboarding__note {
+  margin: 18px 0 0;
+  font-size: 0.92rem;
+  opacity: 0.9;
+  max-width: 56ch;
+}
+
+/* ── Steps ───────────────────────────────────────────────────────────────── */
+
+.onboarding-steps {
+  background-color: #fff;
+  border-radius: 16px;
+  padding: 28px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+}
+
+.onboarding-steps__heading {
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin: 0 0 20px;
+}
+
+.onboarding-steps__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 22px;
+}
+
+.onboarding-step {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.onboarding-step__badge {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background-color: rgba(42, 102, 179, 0.1);
+  color: #2a66b3;
+}
+
+.onboarding-step__title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 2px 0 4px;
+  color: #22303f;
+}
+
+.onboarding-step__number {
+  color: #2a66b3;
+}
+
+.onboarding-step__text {
+  margin: 0;
+  /* #5a6775 on white is 5.3:1 — readable secondary text, unlike Bootstrap's
+     lighter muted grey at small sizes. */
+  color: #5a6775;
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+@media (max-width: 575.98px) {
+  .onboarding__intro {
+    padding: 26px 20px;
+    border-radius: 14px;
+  }
+
+  .onboarding-steps {
+    padding: 22px 18px;
+  }
+
+  .onboarding__actions .btn-lg {
+    width: 100%;
+  }
+}

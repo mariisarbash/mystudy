@@ -14,15 +14,103 @@
     margin-bottom: 25px;
   }
   
-  /* Personalizzazione di FullCalendar */
+  /*
+   * FullCalendar refinements.
+   *
+   * Presentation only: colours, type and spacing brought in line with the
+   * MyStudy design system. No library internals are patched and no
+   * interaction, navigation or ARIA behaviour is altered.
+   */
+
+  .fc {
+    /* FullCalendar's own theming variables — the supported way to restyle it. */
+    --fc-border-color: #e4e9f0;
+    --fc-today-bg-color: #eaf2fd;
+    --fc-page-bg-color: #ffffff;
+    --fc-neutral-bg-color: #f6f8fb;
+  }
+
   .fc .fc-toolbar-title {
-    font-size: 1.5em;
-    color: #333;
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #22303f;
+    letter-spacing: -0.01em;
+    text-transform: capitalize;
+  }
+
+  /* Weekday headers: small, uppercase and muted, so the date numbers lead the
+     hierarchy instead of competing with the column labels. */
+  .fc .fc-col-header-cell {
+    background-color: #f6f8fb;
+    border-bottom-width: 1px;
+  }
+
+  .fc .fc-col-header-cell-cushion {
+    display: block;
+    padding: 10px 6px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #5a6775;
+    text-decoration: none;
+  }
+
+  /*
+   * Day numbers and weekday labels are rendered as <a> by FullCalendar even
+   * when day navigation is off, so they inherit link styling. With navLinks
+   * disabled they are not interactive, and they should not look like links.
+   */
+  .fc a.fc-col-header-cell-cushion,
+  .fc a.fc-daygrid-day-number,
+  .fc a.fc-daygrid-day-number:hover {
+    text-decoration: none;
+  }
+
+  .fc .fc-daygrid-day-number {
+    padding: 8px 10px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #2f3a45;
+  }
+
+  /* Today: a filled blue chip on the date rather than relying on the tinted
+     cell alone. */
+  .fc .fc-day-today .fc-daygrid-day-number {
+    background-color: #2a66b3;
+    color: #ffffff;
+    font-weight: 700;
+    border-radius: 999px;
+    min-width: 28px;
+    padding: 4px 8px;
+    margin: 4px 6px 0 0;
+    text-align: center;
+  }
+
+  /* Soften the outer frame to match the app's cards. */
+  .fc .fc-scrollgrid {
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .fc .fc-daygrid-day-frame {
+    min-height: 92px;
+  }
+
+  .fc .fc-event {
+    border-radius: 5px;
+    padding: 1px 2px;
+    font-size: 0.78rem;
+  }
+
+  .fc .fc-daygrid-event {
+    margin-top: 2px;
   }
   
+  /* White on #3a7bd5 is 4.2:1, under AA; #2a66b3 is 5.6:1. */
   .fc .fc-button-primary {
-    background-color: #3a7bd5;
-    border-color: #3a7bd5;
+    background-color: #2a66b3;
+    border-color: #2a66b3;
   }
   
   .fc .fc-button-primary:not(:disabled):active,
@@ -32,16 +120,52 @@
   }
   
   .fc .fc-button-primary:hover {
-    background-color: #2c60a7;
-    border-color: #2c60a7;
+    background-color: #1f4f8f;
+    border-color: #1f4f8f;
   }
   
-  .fc .fc-daygrid-day.fc-day-today {
-    background-color: #e3f2fd;
+  /* FullCalendar greys out the leading/trailing days of adjacent months with
+     opacity: 0.3, which puts their date numbers at roughly 2:1. A solid grey
+     keeps them visibly secondary while staying legible. */
+  .fc .fc-day-other .fc-daygrid-day-top {
+    opacity: 1;
   }
-  
+
+  .fc .fc-day-other .fc-daygrid-day-number {
+    color: #6b7684;
+  }
+
   .fc .fc-event {
     cursor: pointer;
+  }
+
+  /* Month-view events render as a coloured dot plus plain text on the day
+     cell, so their colour has to work on white and on the highlighted
+     "today" cell rather than on the event colour. */
+  .fc .fc-daygrid-dot-event .fc-event-time,
+  .fc .fc-daygrid-dot-event .fc-event-title {
+    color: #2f3a45;
+  }
+
+  /* FullCalendar clips an over-long event title with no ellipsis, so a title
+     simply ends mid-word ("Ripasso serie di po"). Make the truncation
+     explicit, and keep the time from being squeezed. */
+  .fc .fc-daygrid-dot-event .fc-event-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+  }
+
+  .fc .fc-daygrid-dot-event .fc-event-time {
+    flex: 0 0 auto;
+    font-weight: 600;
+  }
+
+  /* The full text is always available on hover and to assistive technology
+     through the event's own title attribute. */
+  .fc .fc-daygrid-dot-event {
+    padding: 2px 4px;
   }
   
   /* Legenda del calendario */
@@ -63,8 +187,11 @@
     display: flex;
     flex-wrap: wrap;
     gap: 15px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
   }
-  
+
   .legend-item {
     display: flex;
     align-items: center;
@@ -88,5 +215,69 @@
     text-align: center;
     padding: 80px 0;
     font-size: 18px;
-    color: #666;
+    color: #5a6775;
+  }
+
+  /* Keyboard focus on the toolbar buttons; Bootstrap's soft ring is invisible
+     against the filled blue buttons. */
+  .fc .fc-button:focus-visible {
+    outline: 3px solid #0f3c6e;
+    outline-offset: 2px;
+    box-shadow: none;
+  }
+
+  /* ── Small screens ─────────────────────────────────────────────────────── */
+
+  @media (max-width: 767.98px) {
+    .calendar-wrapper {
+      padding: 12px;
+    }
+
+    .fc .fc-toolbar {
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .fc .fc-toolbar-title {
+      font-size: 1.1em;
+    }
+
+    .fc .fc-button {
+      padding: 6px 10px;
+      font-size: 0.85rem;
+    }
+
+    /* The view switcher sits in its own centred row below the grid. */
+    .fc .fc-footer-toolbar {
+      margin-top: 14px;
+    }
+
+    /* Day cells get very tight on a phone; shrink the chrome, not the
+       touch targets. */
+    .fc .fc-daygrid-day-number,
+    .fc .fc-col-header-cell-cushion {
+      font-size: 0.8rem;
+      padding: 4px;
+    }
+
+    .fc .fc-event-title,
+    .fc .fc-event-time {
+      font-size: 0.72rem;
+    }
+
+    .fc .fc-daygrid-day-frame {
+      min-height: 62px;
+    }
+
+    .fc .fc-col-header-cell-cushion {
+      padding: 8px 2px;
+      font-size: 0.66rem;
+      letter-spacing: 0.03em;
+    }
+  }
+
+  @media (max-width: 575.98px) {
+    .calendar-container {
+      padding: 18px 0;
+    }
   }

@@ -4,36 +4,47 @@
   
   .sessions-header {
     display: flex;
+    flex-wrap: wrap;
     justify-content: space-between;
     align-items: center;
+    gap: 14px;
     margin-bottom: 25px;
   }
-  
+
   .sessions-header h2 {
     margin: 0;
   }
-  
+
   .add-session-form {
     margin-bottom: 30px;
+    padding: 20px;
   }
-  
+
   .add-session-form h3 {
     margin-top: 0;
     margin-bottom: 20px;
   }
-  
+
+  /*
+   * The three fields in a row used to be a plain flex row with no wrapping, so
+   * at 320-390px Corso, Data and Ora were squeezed into roughly 90px each and
+   * the date and time controls were unusable. They now wrap, and each field
+   * keeps a sensible minimum width.
+   */
   .form-row {
     display: flex;
+    flex-wrap: wrap;
     gap: 15px;
     margin-bottom: 15px;
   }
-  
+
   .form-group {
-    flex: 1;
+    flex: 1 1 180px;
+    min-width: 0;
   }
-  
+
   .form-group-wide {
-    flex: 2;
+    flex: 2 1 240px;
   }
   
   .form-control {
@@ -119,7 +130,8 @@
   .session-duration {
     display: inline-block;
     background-color: #e1f5fe;
-    color: #0288d1;
+    /* #0288d1 on #e1f5fe was 3.1:1; #01579b is 8.0:1. */
+    color: #01579b;
     font-size: 13px;
     padding: 3px 8px;
     border-radius: 4px;
@@ -140,34 +152,156 @@
     align-items: flex-start;
   }
   
+  /* A 36px square target with a visible focus ring, rather than a bare emoji
+     span that keyboard users could not see themselves land on. */
   .btn-icon {
     background: none;
     border: none;
     cursor: pointer;
-    padding: 5px;
-    border-radius: 3px;
+    width: 36px;
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
     transition: background-color 0.2s;
   }
-  
+
+  .btn-delete {
+    color: #c62828;
+  }
+
   .btn-delete:hover {
     background-color: #ffebee;
   }
-  
-  .empty-state {
+
+  .btn-icon:focus-visible {
+    outline: 3px solid #1a4f8f;
+    outline-offset: 2px;
+  }
+
+  /*
+   * Empty state.
+   *
+   * Previously a bare block: an 18px paragraph stretched the full container
+   * width with 50px of vertical padding above and below, so the text ran in
+   * very long lines inside a lot of unused space. It is now a contained
+   * panel with a capped measure, one heading, one explanation and one
+   * primary action.
+   */
+  .sessions-container .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     text-align: center;
-    padding: 50px 0;
-    color: #666;
+    max-width: 620px;
+    margin: 8px auto 0;
+    padding: 44px 32px;
+    background-color: #fff;
+    border-radius: 14px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+    color: #5a6775;
   }
-  
-  .empty-state p {
-    margin-bottom: 20px;
-    font-size: 18px;
+
+  .sessions-container .empty-state__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 60px;
+    height: 60px;
+    border-radius: 16px;
+    background-color: rgba(42, 102, 179, 0.1);
+    color: #2a66b3;
+    margin-bottom: 18px;
   }
-  
+
+  .sessions-container .empty-state__title {
+    font-size: 1.35rem;
+    font-weight: 600;
+    color: #22303f;
+    margin: 0 0 10px;
+  }
+
+  /* ~54 characters is a comfortable measure; the old full-width line was
+     roughly twice that on a desktop. */
+  .sessions-container .empty-state__text {
+    font-size: 1rem;
+    line-height: 1.6;
+    max-width: 54ch;
+    margin: 0 0 24px;
+  }
+
+  .sessions-container .empty-state__aside {
+    font-size: 0.9rem;
+    margin: 20px 0 0;
+    padding-top: 18px;
+    border-top: 1px solid #eaeef3;
+    width: 100%;
+    max-width: 54ch;
+  }
+
+  @media (max-width: 575.98px) {
+    .sessions-container .empty-state {
+      padding: 32px 20px;
+      margin-top: 4px;
+    }
+
+    .sessions-container .empty-state__title {
+      font-size: 1.2rem;
+    }
+
+    .sessions-container .empty-state > .btn {
+      width: 100%;
+    }
+  }
+
   .error-message {
     background-color: #ffebee;
-    color: #c62828;
+    color: #a81f1f;
     padding: 15px;
     border-radius: 8px;
     margin-bottom: 20px;
+  }
+
+  /* ── Small screens ─────────────────────────────────────────────────────── */
+
+  @media (max-width: 575.98px) {
+    .sessions-header {
+      align-items: stretch;
+    }
+
+    .sessions-header > .btn {
+      width: 100%;
+    }
+
+    /* The 80px time gutter plus padding left almost nothing for the title at
+       320px; stack the card instead. */
+    .session-card {
+      flex-wrap: wrap;
+      position: relative;
+    }
+
+    .session-time {
+      width: auto;
+      min-width: 72px;
+      padding: 10px 14px;
+    }
+
+    .session-color-indicator {
+      width: 100%;
+      height: 4px;
+      order: -1;
+    }
+
+    .session-content {
+      flex: 1 1 100%;
+      padding: 12px 14px;
+    }
+
+    .session-actions {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      padding: 0;
+    }
   }

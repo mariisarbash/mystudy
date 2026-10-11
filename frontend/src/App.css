@@ -103,3 +103,148 @@ h1, h2, h3, h4, h5, h6 {
   font-size: 24px;
   margin: 30px 0 15px;
 }
+
+/* ── App shell ───────────────────────────────────────────────────────────── */
+
+main {
+  flex: 1;
+}
+
+/* The <main> landmark is focused programmatically by the skip link; it should
+   not draw a focus ring when it receives focus that way. */
+main:focus {
+  outline: none;
+}
+
+/* Skip link: off-screen until focused, then pinned to the top-left. */
+.skip-link {
+  position: absolute;
+  left: 8px;
+  top: -60px;
+  z-index: 1100;
+  padding: 10px 16px;
+  background-color: #ffffff;
+  color: #1a4f8f;
+  font-weight: 600;
+  border-radius: 0 0 8px 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  text-decoration: none;
+  transition: top 0.15s ease-in-out;
+}
+
+.skip-link:focus {
+  top: 0;
+  outline: 3px solid #2a66b3;
+  outline-offset: 2px;
+}
+
+/* ── Bootstrap blue, aligned with the app's own blue ─────────────────────── */
+
+/*
+ * Bootstrap 5's default primary (#0d6efd) is below WCAG AA where it matters:
+ * as link-coloured text on white it reaches only 4.0:1, and white on it is
+ * 4.48:1 — both under 4.5:1. These overrides point Bootstrap's button
+ * variables at the palette the rest of the app already uses (#2a66b3 /
+ * #1a4f8f), which is both more consistent and contrast-safe.
+ *
+ * Written as .btn.btn-primary rather than .btn-primary: bootstrap.min.css is
+ * imported last in main.jsx, so an equal-specificity selector would lose.
+ * Doubling the class also keeps these working inside modals, which
+ * react-bootstrap renders through a portal on <body>, outside .App — an
+ * .App-scoped override silently missed every dialog button.
+ */
+.btn.btn-primary {
+  --bs-btn-bg: #2a66b3;
+  --bs-btn-border-color: #2a66b3;
+  --bs-btn-hover-bg: #1f4f8f;
+  --bs-btn-hover-border-color: #1f4f8f;
+  --bs-btn-active-bg: #1a4f8f;
+  --bs-btn-active-border-color: #1a4f8f;
+  --bs-btn-disabled-bg: #2a66b3;
+  --bs-btn-disabled-border-color: #2a66b3;
+}
+
+.btn.btn-outline-primary {
+  --bs-btn-color: #1a4f8f;
+  --bs-btn-border-color: #1a4f8f;
+  --bs-btn-hover-bg: #1a4f8f;
+  --bs-btn-hover-border-color: #1a4f8f;
+  --bs-btn-active-bg: #0f3c6e;
+  --bs-btn-active-border-color: #0f3c6e;
+  --bs-btn-disabled-color: #1a4f8f;
+  --bs-btn-disabled-border-color: #1a4f8f;
+}
+
+/* ── Form field hints ────────────────────────────────────────────────────── */
+
+/* Only one field on the course form is actually required, so the optional
+   ones are marked rather than the required one. #5a6775 on white is 5.3:1. */
+.field-optional {
+  font-weight: 400;
+  font-size: 0.85em;
+  color: #5a6775;
+}
+
+.form-hint {
+  font-size: 0.9rem;
+  color: #5a6775;
+  margin: -6px 0 18px;
+  max-width: 62ch;
+}
+
+/* ── Focus visibility ────────────────────────────────────────────────────── */
+
+/*
+ * A single, consistent keyboard focus ring. Bootstrap's default is a soft
+ * translucent box-shadow that disappears against coloured card headers, and
+ * several of this app's custom controls (.time-button, .mode-button, the
+ * completion circles) had no focus style at all.
+ */
+:focus-visible {
+  outline: 3px solid #1a4f8f;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Inside a coloured course header a dark ring disappears; use white there. */
+.course-header :focus-visible,
+.card-header[style*="background"] :focus-visible {
+  outline-color: #ffffff;
+}
+
+/* ── Responsive / motion guards ──────────────────────────────────────────── */
+
+/* Long unbroken strings (a pasted syllabus line, a URL) must wrap rather than
+   widen the page. */
+body {
+  overflow-wrap: break-word;
+}
+
+@media (max-width: 575.98px) {
+  .container,
+  .container-fluid {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}
+
+/* Lift-on-hover is meaningless on touch and causes jitter when a tap is
+   interpreted as a hover. */
+@media (hover: none) {
+  .card:hover,
+  .btn-primary:hover {
+    transform: none;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

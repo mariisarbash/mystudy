@@ -58,14 +58,53 @@
   margin-bottom: 40px;
 }
 
-.action-buttons {
+/* Title + actions. Wraps instead of squashing: at 320px the old row forced
+   "Nuova Sessione" and "Nuova Materia" off the right edge of the page. */
+.dashboard-header {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.dashboard-actions {
+  display: flex;
+  flex-wrap: wrap;
   gap: 10px;
+}
+
+.dashboard-nudge {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 @media (max-width: 768px) {
   .dashboard-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .dashboard-header {
+    align-items: stretch;
+  }
+
+  .dashboard-actions {
+    width: 100%;
+  }
+
+  /* Full-width stacked actions: comfortably tappable and never clipped. */
+  .dashboard-actions > .btn {
+    width: 100%;
+  }
+
+  .dashboard-nudge > .btn {
+    width: 100%;
   }
 }
 
@@ -194,37 +233,20 @@
   font-size: 14px;
 }
 
-.empty-state {
-  text-align: center;
-  padding: 30px 20px;
-  color: #666;
-}
-
-.btn {
-  display: inline-block;
-  width: auto;
-  margin-top: 15px;
-  padding: 10px 20px;
-  border-radius: 6px;
-  font-weight: 500;
-  transition: all 0.2s;
-}
-
-.btn-primary {
-  background-color: #3a7bd5;
-  color: white;
-  border: none;
-}
-
-.btn-primary:hover {
-  background-color: #2a66b3;
-  transform: translateY(-2px);
-}
-
-.btn-block {
-  display: block;
-  width: 100%;
-}
+/*
+ * The global .btn / .btn-primary / .btn-block rules that used to live here
+ * have been removed.
+ *
+ * bootstrap.min.css is imported last, so it already won on display, padding,
+ * font-weight, border-radius, transition and every colour in that block —
+ * the declarations were dead. The one that did survive was
+ * `margin-top: 15px`, which Bootstrap does not set: it applied to every
+ * button in the application, adding a stray 15px above each one. It is what
+ * put a visible gap over "Apri il corso" on a course card.
+ *
+ * The hover lift is kept, in App.css, where the rest of the button styling
+ * lives.
+ */
 
 /* Progress stats */
 .progress-stats {
@@ -323,13 +345,14 @@
 }
 
 .link-highlight {
-  color: #3a7bd5;
+  color: #1a4f8f;
   font-weight: 500;
   text-decoration: none;
 }
 
 .link-highlight:hover {
   text-decoration: underline;
+  color: #0f3c6e;
 }
 
 /* Tools section */
@@ -395,6 +418,7 @@
 .schedule-row {
   display: grid;
   grid-template-columns: 0.8fr 2fr 0.8fr 1fr;
+  align-items: start;
   padding: 16px 20px;
   border-bottom: 1px solid #e9ecef;
   transition: background-color 0.2s;
@@ -409,9 +433,17 @@
 }
 
 .schedule-cell {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  min-width: 0;
+}
+
+/* The subject is the one cell that can legitimately be long, so it wraps
+   rather than being cut off with an ellipsis. */
+.schedule-cell--subject {
+  overflow-wrap: break-word;
+}
+
+.schedule-topic {
+  color: #5a6775;
 }
 
 .status-badge {
@@ -474,12 +506,12 @@
   font-size: 18px;
   font-weight: 700;
   line-height: 1;
-  color: #3a7bd5;
+  color: #1a4f8f;
 }
 
 .upcoming-date .month {
   font-size: 13px;
-  color: #6c757d;
+  color: #55606d;
   text-transform: uppercase;
 }
 
@@ -497,7 +529,8 @@
 
 .see-all-link {
   font-size: 14px;
-  color: #3a7bd5;
+  /* #3a7bd5 was 4.2:1 on white, just under AA. */
+  color: #1a4f8f;
   font-weight: 500;
   text-decoration: none;
 }
@@ -543,7 +576,7 @@
 
 .wellness-tip {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   margin-bottom: 16px;
 }
 
@@ -555,10 +588,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 50px;
-  height: 50px;
+  width: 46px;
+  height: 46px;
+  /* Without this the icon tile is squeezed by longer tip text. */
+  flex: 0 0 46px;
   border-radius: 12px;
-  margin-right: 15px;
+  margin-right: 14px;
 }
 
 .wellness-icon.coffee {
@@ -580,38 +615,74 @@
 .wellness-content p {
   margin: 0;
   font-size: 14px;
-  color: #6c757d;
+  color: #5a6775;
+  line-height: 1.5;
+}
+
+/* Course rows with no syllabus yet: the dashboard's inline import prompt. */
+.course-progress-item--empty {
+  background-color: #f8f9fb;
 }
 
 /* Responsive adjustments */
-@media (max-width: 992px) {
-  .action-buttons {
-    margin-top: 15px;
-  }
-  
-  .schedule-header, .schedule-row {
-    grid-template-columns: 1fr 2fr 1fr;
+
+/*
+ * The schedule used to drop columns as the viewport narrowed — "Stato" below
+ * 992px and "Durata" below 576px — so a phone user simply never saw how long
+ * a session was. Below 768px each row becomes a small stacked card instead,
+ * with every field labelled and nothing hidden.
+ */
+@media (max-width: 767.98px) {
+  .schedule-header {
+    display: none;
   }
 
-  .schedule-header div:nth-child(4), 
-  .schedule-row div:nth-child(4) {
-    display: none;
+  .schedule-row {
+    display: block;
+    padding: 14px 16px;
+  }
+
+  .schedule-cell {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 3px 0;
+  }
+
+  .schedule-cell::before {
+    content: attr(data-label);
+    flex: 0 0 64px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #5a6775;
+  }
+
+  .schedule-value {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .schedule-cell--subject {
+    font-weight: 600;
   }
 }
 
-@media (max-width: 576px) {
-  .schedule-header, .schedule-row {
-    grid-template-columns: 1fr 2fr;
-    font-size: 14px;
-  }
-
-  .schedule-header div:nth-child(3), 
-  .schedule-row div:nth-child(3) {
-    display: none;
-  }
-  
+@media (max-width: 575.98px) {
   .upcoming-info {
     flex-direction: column;
     gap: 3px;
+  }
+
+  .upcoming-date {
+    min-width: 52px;
+    margin-right: 12px;
+  }
+
+  .upcoming-item,
+  .course-progress-item {
+    padding-left: 16px;
+    padding-right: 16px;
   }
 }

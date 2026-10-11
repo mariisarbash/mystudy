@@ -1,43 +1,42 @@
-import React, { useState, useEffect } from 'react';
-import axios from '../services/api';  // Importa il file axios configurato
-import { 
-  Card, Button, Form, ListGroup, 
-  Spinner, Alert, Modal, Row, Col 
-} from 'react-bootstrap';
-import { FaPlus, FaEdit, FaTrash, FaCheck, FaUpload } from 'react-icons/fa';
+import React, { useCallback, useEffect, useState } from 'react';
+import axios from '../services/api';
+import { Card, Button, Form, ListGroup, Spinner, Alert, Modal, Row, Col } from 'react-bootstrap';
+import { FaPlus, FaEdit, FaTrash, FaCheck, FaClipboardList } from 'react-icons/fa';
+import SyllabusImportModal from './SyllabusImportModal';
 
-// Prova
-const TopicsList = ({ courseId }) => {
+/**
+ * The syllabus checklist for one course.
+ *
+ * Import is no longer one button among several in a toolbar: when a course
+ * has no topics yet the whole panel becomes a single clear call to action
+ * explaining what pasting the syllabus will do.
+ */
+const TopicsList = ({ courseId, courseName }) => {
   const [topics, setTopics] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [showImportForm, setShowImportForm] = useState(false);
-  const [currentTopic, setCurrentTopic] = useState({
-    title: '',
-    parentId: null,
-    order: 0
-  });
-  const [programText, setProgramText] = useState('');
+  const [currentTopic, setCurrentTopic] = useState({ title: '', parentId: null, order: 0 });
   const [editMode, setEditMode] = useState(false);
 
-  useEffect(() => {
-    fetchTopics();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [courseId]);
-
-  const fetchTopics = async () => {
+  const fetchTopics = useCallback(async () => {
     try {
       setLoading(true);
       const response = await axios.get(`/api/topics/course/${courseId}`);
-      setTopics(response.data);
-      setLoading(false);
+      setTopics(response.data || []);
+      setError(null);
     } catch (err) {
       setError('Errore nel caricamento degli argomenti');
-      setLoading(false);
       console.error(err);
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [courseId]);
+
+  useEffect(() => {
+    fetchTopics();
+  }, [fetchTopics]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -45,43 +44,25 @@ const TopicsList = ({ courseId }) => {
   };
 
   const resetForm = () => {
-    setCurrentTopic({
-      title: '',
-      parentId: null,
-      order: 0
-    });
+    setCurrentTopic({ title: '', parentId: null, order: topics.length });
     setEditMode(false);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     try {
       if (editMode) {
         await axios.put(`/api/topics/${currentTopic._id}`, currentTopic);
       } else {
         await axios.post(`/api/topics/course/${courseId}`, currentTopic);
       }
-      
+
       fetchTopics();
       setShowForm(false);
       resetForm();
     } catch (err) {
-      setError('Errore nel salvare l\'argomento');
-      console.error(err);
-    }
-  };
-
-  const handleImportProgram = async (e) => {
-    e.preventDefault();
-    
-    try {
-      await axios.post(`/api/topics/course/${courseId}/generate`, { programText });
-      fetchTopics();
-      setShowImportForm(false);
-      setProgramText('');
-    } catch (err) {
-      setError('Errore nell\'importazione del programma');
+      setError("Errore nel salvare l'argomento");
       console.error(err);
     }
   };
@@ -92,13 +73,13 @@ const TopicsList = ({ courseId }) => {
     setShowForm(true);
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm('Sei sicuro di voler eliminare questo argomento?')) {
+  const handleDelete = async (topic) => {
+    if (window.confirm(`Eliminare l'argomento "${topic.title}"?`)) {
       try {
-        await axios.delete(`/api/topics/${id}/course/${courseId}`);
+        await axios.delete(`/api/topics/${topic._id}/course/${courseId}`);
         fetchTopics();
       } catch (err) {
-        setError('Errore nell\'eliminazione dell\'argomento');
+        setError("Errore nell'eliminazione dell'argomento");
         console.error(err);
       }
     }
@@ -106,289 +87,312 @@ const TopicsList = ({ courseId }) => {
 
   const toggleCompletion = async (topic) => {
     try {
-      await axios.put(`/api/topics/${topic._id}`, {
-        ...topic,
-        completed: !topic.completed
-      });
-      
+      // Send only the field that changes: the controller does a partial
+      // findByIdAndUpdate, and the rendered topic object carries a `children`
+      // array that has no business being written back.
+      await axios.put(`/api/topics/${topic._id}`, { completed: !topic.completed });
       fetchTopics();
     } catch (err) {
-      setError('Errore nell\'aggiornamento dell\'argomento');
+      setError("Errore nell'aggiornamento dell'argomento");
       console.error(err);
     }
   };
 
-  // Organizza gli argomenti in una struttura gerarchica
-  const organizeTopics = (topics) => {
-    const topicsMap = {};
-    const rootTopics = [];
-    
-    // Prima creiamo una mappa di tutti gli argomenti
-    topics.forEach(topic => {
-      topicsMap[topic._id] = { ...topic, children: [] };
+  // Organise topics into a hierarchy (the schema allows a parentId; the
+  // importer never sets one, but a manually added topic can).
+  const organizeTopics = (list) => {
+    const map = {};
+    const roots = [];
+
+    list.forEach((topic) => {
+      map[topic._id] = { ...topic, children: [] };
     });
-    
-    // Poi costruiamo la gerarchia
-    topics.forEach(topic => {
-      if (topic.parentId && topicsMap[topic.parentId]) {
-        topicsMap[topic.parentId].children.push(topicsMap[topic._id]);
+
+    list.forEach((topic) => {
+      if (topic.parentId && map[topic.parentId]) {
+        map[topic.parentId].children.push(map[topic._id]);
       } else {
-        rootTopics.push(topicsMap[topic._id]);
+        roots.push(map[topic._id]);
       }
     });
-    
-    // Ordinamento per campo 'order'
-    rootTopics.sort((a, b) => a.order - b.order);
-    
-    return rootTopics;
+
+    roots.sort((a, b) => a.order - b.order);
+    return roots;
   };
 
-  // Renderizza un topic e i suoi figli ricorsivamente
-  const renderTopic = (topic, level = 0) => {
-    return (
-      <React.Fragment key={topic._id}>
-        <ListGroup.Item 
-          className="d-flex align-items-center"
-          style={{ paddingLeft: `${level * 20 + 15}px` }}
-        >
-          <div 
-            className="me-3" 
-            style={{ cursor: 'pointer' }}
-            onClick={() => toggleCompletion(topic)}
-          >
-            <div 
-              className={`rounded-circle border d-flex align-items-center justify-content-center ${topic.completed ? 'bg-success text-white' : ''}`}
-              style={{ width: '24px', height: '24px', borderWidth: '2px' }}
+  const renderTopic = (topic, level = 0) => (
+    <React.Fragment key={topic._id}>
+      <ListGroup.Item className={topic.completed ? 'is-done' : undefined}>
+        <div className="item-row" style={{ paddingLeft: `${level * 20}px` }}>
+          <div className="item-main">
+            <button
+              type="button"
+              className="toggle-done"
+              aria-pressed={topic.completed === true}
+              aria-label={
+                topic.completed
+                  ? `Segna "${topic.title}" come da studiare`
+                  : `Segna "${topic.title}" come completato`
+              }
+              onClick={() => toggleCompletion(topic)}
             >
-              {topic.completed && <FaCheck size={12} />}
+              <FaCheck size={12} aria-hidden="true" />
+            </button>
+
+            <div className="item-body">
+              <p className="item-title">{topic.title}</p>
             </div>
           </div>
-          
-          <div className="flex-grow-1">
-            <div className={`${topic.completed ? 'text-decoration-line-through text-muted' : ''}`}>
-              {topic.title}
-            </div>
-          </div>
-          
-          <div className="d-flex align-items-center">
-            <Button 
-              variant="outline-secondary" 
+
+          <div className="item-controls">
+            <Button
+              variant="outline-secondary"
               size="sm"
-              className="me-2"
+              className="icon-button"
               onClick={() => handleEdit(topic)}
+              title={`Modifica "${topic.title}"`}
+              aria-label={`Modifica l'argomento ${topic.title}`}
             >
-              <FaEdit />
+              <FaEdit aria-hidden="true" />
             </Button>
-            
-            <Button 
-              variant="outline-danger" 
+
+            <Button
+              variant="outline-danger"
               size="sm"
-              onClick={() => handleDelete(topic._id)}
+              className="icon-button"
+              onClick={() => handleDelete(topic)}
+              title={`Elimina "${topic.title}"`}
+              aria-label={`Elimina l'argomento ${topic.title}`}
             >
-              <FaTrash />
+              <FaTrash aria-hidden="true" />
             </Button>
           </div>
-        </ListGroup.Item>
-        
-        {/* Renderizza ricorsivamente i figli */}
-        {topic.children.sort((a, b) => a.order - b.order).map(child => 
-          renderTopic(child, level + 1)
-        )}
-      </React.Fragment>
-    );
-  };
+        </div>
+      </ListGroup.Item>
+
+      {topic.children
+        .sort((a, b) => a.order - b.order)
+        .map((child) => renderTopic(child, level + 1))}
+    </React.Fragment>
+  );
+
+  const renderTopicForm = () => (
+    <Modal
+      show={showForm}
+      onHide={() => setShowForm(false)}
+      centered
+      scrollable
+      aria-labelledby="titolo-form-argomento"
+    >
+      <Modal.Header closeButton closeLabel="Chiudi">
+        <Modal.Title id="titolo-form-argomento" className="h5 mb-0">
+          {editMode ? 'Modifica argomento' : 'Nuovo argomento'}
+        </Modal.Title>
+      </Modal.Header>
+      <Form onSubmit={handleSubmit}>
+        <Modal.Body>
+          <Form.Group className="mb-3" controlId="argomento-titolo">
+            <Form.Label>Titolo</Form.Label>
+            <Form.Control
+              type="text"
+              name="title"
+              value={currentTopic.title}
+              onChange={handleInputChange}
+              required
+              autoFocus
+            />
+          </Form.Group>
+
+          <Form.Group className="mb-3" controlId="argomento-padre">
+            <Form.Label>Argomento principale (facoltativo)</Form.Label>
+            <Form.Select
+              name="parentId"
+              value={currentTopic.parentId || ''}
+              onChange={handleInputChange}
+            >
+              <option value="">Nessuno (argomento principale)</option>
+              {topics
+                .filter((t) => t._id !== currentTopic._id)
+                .map((topic) => (
+                  <option key={topic._id} value={topic._id}>
+                    {topic.title}
+                  </option>
+                ))}
+            </Form.Select>
+            <Form.Text className="text-body-secondary">
+              Seleziona un argomento principale se questo è un sotto-argomento.
+            </Form.Text>
+          </Form.Group>
+
+          <Form.Group className="mb-3" controlId="argomento-ordine">
+            <Form.Label>Ordine</Form.Label>
+            <Form.Control
+              type="number"
+              name="order"
+              value={currentTopic.order}
+              onChange={handleInputChange}
+            />
+            <Form.Text className="text-body-secondary">
+              Determina la posizione dell’argomento nell’elenco.
+            </Form.Text>
+          </Form.Group>
+        </Modal.Body>
+
+        <Modal.Footer className="flex-wrap gap-2 justify-content-end">
+          <Button variant="outline-secondary" onClick={() => setShowForm(false)}>
+            Annulla
+          </Button>
+          <Button variant="primary" type="submit">
+            Salva
+          </Button>
+        </Modal.Footer>
+      </Form>
+    </Modal>
+  );
 
   if (loading && topics.length === 0) {
-    return <Spinner animation="border" size="sm" />;
+    return (
+      <div className="text-center py-4">
+        <Spinner animation="border" variant="primary" role="status">
+          <span className="visually-hidden">Caricamento…</span>
+        </Spinner>
+      </div>
+    );
   }
 
-  // Organizza gli argomenti in una struttura gerarchica per la visualizzazione
   const organizedTopics = organizeTopics(topics);
-  
-  // Calcola il progresso complessivo
-  const completedTopics = topics.filter(topic => topic.completed).length;
-  const progressPercentage = topics.length > 0 
-    ? Math.round((completedTopics / topics.length) * 100) 
-    : 0;
+  const completedTopics = topics.filter((t) => t.completed).length;
+  const progressPercentage = topics.length > 0 ? Math.round((completedTopics / topics.length) * 100) : 0;
+
+  // ── Empty state: the primary entry point into the product's main flow ──
+  if (topics.length === 0) {
+    return (
+      <>
+        {error && (
+          <Alert variant="danger" role="alert">
+            {error}
+          </Alert>
+        )}
+
+        <Card className="shadow-sm border-0 mb-4">
+          <Card.Body className="text-center p-4 p-md-5">
+            <span className="syllabus-cta__icon" aria-hidden="true">
+              <FaClipboardList size={26} />
+            </span>
+            <h2 className="h4 mt-3">Inizia dal programma del corso</h2>
+            <p className="text-body-secondary mx-auto mb-4" style={{ maxWidth: '46ch' }}>
+              Copia il programma dal sito del corso e incollalo qui: ogni riga diventa un
+              argomento da spuntare, così vedi subito quanto ti manca all’esame.
+            </p>
+
+            <div className="d-flex flex-wrap gap-2 justify-content-center">
+              <Button variant="primary" size="lg" onClick={() => setShowImportForm(true)}>
+                <FaClipboardList className="me-2" aria-hidden="true" />
+                Incolla il programma
+              </Button>
+              <Button
+                variant="outline-secondary"
+                size="lg"
+                onClick={() => {
+                  resetForm();
+                  setShowForm(true);
+                }}
+              >
+                <FaPlus className="me-2" aria-hidden="true" />
+                Aggiungi un argomento
+              </Button>
+            </div>
+          </Card.Body>
+        </Card>
+
+        <SyllabusImportModal
+          show={showImportForm}
+          onHide={() => setShowImportForm(false)}
+          courseId={courseId}
+          courseName={courseName}
+          onImported={() => fetchTopics()}
+        />
+
+        {renderTopicForm()}
+      </>
+    );
+  }
 
   return (
     <div className="mb-5">
-      <Card className="mb-4 shadow-sm">
-        <Card.Header className="d-flex justify-content-between align-items-center">
-          <h5 className="mb-0">Statistiche Programma</h5>
+      <Card className="mb-4 shadow-sm stats-card">
+        <Card.Header>
+          <h2 className="h6 mb-0">Avanzamento del programma</h2>
         </Card.Header>
         <Card.Body>
-          <Row>
-            <Col md={6} className="text-center mb-3 mb-md-0">
-              <h2>{topics.length}</h2>
-              <div className="text-muted">Argomenti totali</div>
+          <Row className="text-center g-3">
+            <Col xs={4}>
+              <div className="stat-value">{topics.length}</div>
+              <div className="text-body-secondary small">Argomenti</div>
             </Col>
-            <Col md={6} className="text-center">
-              <h2>{completedTopics}</h2>
-              <div className="text-muted">Argomenti completati</div>
+            <Col xs={4}>
+              <div className="stat-value">{completedTopics}</div>
+              <div className="text-body-secondary small">Completati</div>
+            </Col>
+            <Col xs={4}>
+              <div className="stat-value">{topics.length - completedTopics}</div>
+              <div className="text-body-secondary small">Da studiare</div>
             </Col>
           </Row>
-          
-          <div className="progress mt-4">
-            <div 
-              className="progress-bar" 
-              role="progressbar" 
-              style={{ 
-                width: `${progressPercentage}%`,
-                backgroundColor: '#3a7bd5'
-              }} 
-              aria-valuenow={progressPercentage} 
-              aria-valuemin="0" 
-              aria-valuemax="100"
-            >
-              {progressPercentage}%
-            </div>
+
+          <div
+            className="progress"
+            role="progressbar"
+            aria-label="Avanzamento del programma"
+            aria-valuenow={progressPercentage}
+            aria-valuemin={0}
+            aria-valuemax={100}
+          >
+            <div className="progress-bar" style={{ width: `${progressPercentage}%` }} />
           </div>
+          <p className="text-center small text-body-secondary mt-2 mb-0">
+            {progressPercentage}% del programma completato
+          </p>
         </Card.Body>
       </Card>
-      
-      <div className="d-flex justify-content-between align-items-center mb-3">
-        <h3 className="mb-0">Programma</h3>
-        <div>
-          <Button 
-            variant="outline-primary" 
-            className="me-2"
-            onClick={() => setShowImportForm(true)}
-          >
-            <FaUpload /> Importa Programma
+
+      <div className="section-header">
+        <h2 className="h5 mb-0">Argomenti</h2>
+        <div className="d-flex flex-wrap gap-2">
+          <Button variant="outline-primary" onClick={() => setShowImportForm(true)}>
+            <FaClipboardList className="me-2" aria-hidden="true" />
+            Incolla altro programma
           </Button>
-          <Button 
-            variant="primary" 
+          <Button
+            variant="primary"
             onClick={() => {
               resetForm();
               setShowForm(true);
             }}
           >
-            <FaPlus /> Aggiungi Argomento
+            <FaPlus className="me-2" aria-hidden="true" />
+            Aggiungi argomento
           </Button>
         </div>
       </div>
-      
-      {error && <Alert variant="danger">{error}</Alert>}
-      
-      {topics.length === 0 ? (
-        <Alert variant="info">
-          Non ci sono argomenti per questo corso. Aggiungi il tuo primo argomento o importa il programma completo!
+
+      {error && (
+        <Alert variant="danger" role="alert">
+          {error}
         </Alert>
-      ) : (
-        <ListGroup>
-          {organizedTopics.map(topic => renderTopic(topic))}
-        </ListGroup>
       )}
-      
-      {/* Modal per aggiungere/modificare un argomento */}
-      <Modal show={showForm} onHide={() => setShowForm(false)}>
-        <Modal.Header closeButton>
-          <Modal.Title>{editMode ? 'Modifica' : 'Aggiungi'} Argomento</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <Form onSubmit={handleSubmit}>
-            <Form.Group className="mb-3">
-              <Form.Label>Titolo</Form.Label>
-              <Form.Control
-                type="text"
-                name="title"
-                value={currentTopic.title}
-                onChange={handleInputChange}
-                required
-              />
-            </Form.Group>
-            
-            <Form.Group className="mb-3">
-              <Form.Label>Argomento Principale (opzionale)</Form.Label>
-              <Form.Select
-                name="parentId"
-                value={currentTopic.parentId || ''}
-                onChange={handleInputChange}
-              >
-                <option value="">Nessuno (argomento principale)</option>
-                {topics.map(topic => (
-                  <option key={topic._id} value={topic._id}>
-                    {topic.title}
-                  </option>
-                ))}
-              </Form.Select>
-              <Form.Text className="text-muted">
-                Seleziona un argomento principale se questo è un sotto-argomento.
-              </Form.Text>
-            </Form.Group>
-            
-            <Form.Group className="mb-3">
-              <Form.Label>Ordine</Form.Label>
-              <Form.Control
-                type="number"
-                name="order"
-                value={currentTopic.order}
-                onChange={handleInputChange}
-              />
-              <Form.Text className="text-muted">
-                L'ordine determina la posizione dell'argomento nell'elenco.
-              </Form.Text>
-            </Form.Group>
-            
-            <div className="d-flex justify-content-end">
-              <Button 
-                variant="secondary" 
-                onClick={() => setShowForm(false)}
-                className="me-2"
-              >
-                Annulla
-              </Button>
-              <Button variant="primary" type="submit">
-                Salva
-              </Button>
-            </div>
-          </Form>
-        </Modal.Body>
-      </Modal>
-      
-      {/* Modal per importare il programma */}
-      <Modal show={showImportForm} onHide={() => setShowImportForm(false)} size="lg">
-        <Modal.Header closeButton>
-          <Modal.Title>Importa Programma</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <p>
-            Incolla qui il testo del programma del corso. Il sistema proverà a organizzarlo in argomenti.
-          </p>
-          <Form onSubmit={handleImportProgram}>
-            <Form.Group className="mb-3">
-              <Form.Control
-                as="textarea"
-                value={programText}
-                onChange={(e) => setProgramText(e.target.value)}
-                rows={10}
-                placeholder="Esempio:
-                
-1. Introduzione alla materia
-2. Concetti fondamentali
-   2.1 Teoria principale
-   2.2 Applicazioni pratiche
-3. Argomenti avanzati"
-                required
-              />
-            </Form.Group>
-            
-            <div className="d-flex justify-content-end">
-              <Button 
-                variant="secondary" 
-                onClick={() => setShowImportForm(false)}
-                className="me-2"
-              >
-                Annulla
-              </Button>
-              <Button variant="primary" type="submit">
-                Importa
-              </Button>
-            </div>
-          </Form>
-        </Modal.Body>
-      </Modal>
+
+      <ListGroup>{organizedTopics.map((topic) => renderTopic(topic))}</ListGroup>
+
+      <SyllabusImportModal
+        show={showImportForm}
+        onHide={() => setShowImportForm(false)}
+        courseId={courseId}
+        courseName={courseName}
+        onImported={() => fetchTopics()}
+      />
+
+      {renderTopicForm()}
     </div>
   );
 };

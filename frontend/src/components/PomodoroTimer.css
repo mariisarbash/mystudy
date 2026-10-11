@@ -24,22 +24,32 @@
   
   .mode-button {
     padding: 10px 15px;
-    border: none;
+    border: 1px solid #c9d2dd;
     background-color: #f5f7fa;
-    color: #555;
+    /* #44505d is 8.2:1 on #f5f7fa; the old #555 sat at 7.0:1 but with no
+       border the inactive buttons read as plain text. */
+    color: #44505d;
     border-radius: 25px;
     cursor: pointer;
     font-weight: 500;
     transition: all 0.2s;
   }
-  
+
   .mode-button:hover {
     background-color: #e9ecef;
   }
-  
+
   .mode-button.active {
-    background-color: #3a7bd5;
+    background-color: #2a66b3;
+    border-color: #2a66b3;
     color: white;
+    font-weight: 600;
+  }
+
+  .mode-button:focus-visible,
+  .control-button:focus-visible {
+    outline: 3px solid #1a4f8f;
+    outline-offset: 2px;
   }
   
   .timer-display {
@@ -69,19 +79,26 @@
     min-width: 120px;
   }
   
+  /*
+   * Contrast fixes. White on #4caf50 was 2.8:1 and white on #ff9800 about
+   * 2.1:1 — both well under the 4.5:1 minimum, on the two most important
+   * buttons of the page. The darker green reads 5.4:1 and the orange now
+   * carries near-black text at 6.8:1.
+   */
   .control-button.start {
-    background-color: #4caf50;
+    background-color: #1d7a38;
     color: white;
   }
-  
+
   .control-button.pause {
     background-color: #ff9800;
-    color: white;
+    color: #1f2933;
   }
-  
+
   .control-button.reset {
-    background-color: #f5f5f5;
-    color: #333;
+    background-color: #f1f3f5;
+    color: #2f3a45;
+    border: 1px solid #c9d2dd;
   }
   
   .control-button:hover {
@@ -129,70 +146,50 @@
     display: block;
     font-size: 28px;
     font-weight: 700;
-    color: #3a7bd5;
+    color: #2a66b3;
     margin-bottom: 5px;
   }
-  
+
   .stat-label {
     font-size: 14px;
-    color: #666;
+    color: #5a6775;
   }
-  
-  .completion-modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-  }
-  
-  .completion-modal {
-    background-color: white;
-    border-radius: 12px;
-    padding: 30px;
-    width: 90%;
-    max-width: 400px;
-    text-align: center;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-  }
-  
-  .completion-modal h3 {
-    margin-top: 0;
-    color: #4caf50;
-  }
-  
-  .modal-buttons {
-    display: flex;
-    justify-content: center;
-    gap: 15px;
-    margin-top: 25px;
-  }
-  
-  @media (max-width: 480px) {
-    .timer-display {
-      font-size: 60px;
+
+  /* The completion dialog is now a react-bootstrap Modal, so the hand-rolled
+     .completion-modal overlay styles that used to live here are gone. */
+
+  @media (max-width: 575.98px) {
+    .pomodoro-card {
+      padding: 22px 18px;
     }
-    
+
+    .timer-display {
+      /* Scales with the viewport instead of jumping at one breakpoint, so it
+         stays inside the card at 320px as well as at 575px. */
+      font-size: clamp(3.2rem, 18vw, 5rem);
+    }
+
     .timer-controls {
       flex-direction: column;
-      gap: 15px;
+      gap: 12px;
     }
-    
+
     .control-button {
       width: 100%;
     }
-    
+
     .mode-selector {
       flex-wrap: wrap;
+      gap: 8px;
     }
-    
+
+    .mode-button {
+      flex: 1 1 auto;
+      padding: 10px 12px;
+      font-size: 0.9rem;
+    }
+
     .pomodoro-stats {
-      flex-direction: column;
-      gap: 15px;
+      gap: 24px;
     }
   }

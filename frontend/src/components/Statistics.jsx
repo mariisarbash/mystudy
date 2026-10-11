@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
+import { FaChartBar, FaRegClock, FaBookOpen } from 'react-icons/fa';
 import './Statistics.css';
 import { api } from '../services/api';
+import { courseIdOf } from '../utils/sessions';
 
 function Statistics() {
   const [stats, setStats] = useState({
@@ -46,10 +49,15 @@ function Statistics() {
             filteredSessions.forEach(session => {
               const duration = session.duration || 0;
               totalMinutes += duration;
-              
-              if (session.course && coursesMap[session.course]) {
-                coursesMap[session.course].minutes += duration;
-                coursesMap[session.course].sessions += 1;
+
+              // `session.course` is populated into an object by the API, so
+              // indexing the map with it directly produced the key
+              // "[object Object]" and never matched: "Distribuzione del tempo
+              // per corso" was permanently empty.
+              const id = courseIdOf(session);
+              if (id && coursesMap[id]) {
+                coursesMap[id].minutes += duration;
+                coursesMap[id].sessions += 1;
               }
             });
             
@@ -194,27 +202,41 @@ function Statistics() {
   // Render bar chart for last 7 days
   const renderWeeklyChart = () => {
     const maxValue = Math.max(...stats.lastWeekSessions.data) || 100;
-    
+
     return (
-      <div className="weekly-chart">
-        <h3>Minuti di studio negli ultimi 7 giorni</h3>
+      <figure className="weekly-chart">
+        <figcaption>
+          <h3>Minuti di studio negli ultimi 7 giorni</h3>
+        </figcaption>
         <div className="chart-container">
           {stats.lastWeekSessions.data.map((value, index) => (
             <div className="chart-column" key={index}>
-              <div 
-                className="chart-bar" 
-                style={{ 
-                  height: `${(value / maxValue) * 100}%`,
-                  backgroundColor: value > 0 ? '#3a7bd5' : '#e0e0e0'
-                }}
-              >
-                <span className="chart-value">{value}</span>
+              {/*
+                The bar's percentage height needs a parent with a definite
+                height to resolve against. Previously it sat directly in an
+                auto-height flex column, so every bar collapsed to its 4px
+                minimum and the chart was a row of identical dashes whatever
+                the values were.
+              */}
+              <div className="chart-bar-track">
+                <div
+                  className="chart-bar"
+                  style={{
+                    height: `${(value / maxValue) * 100}%`,
+                    backgroundColor: value > 0 ? '#2a66b3' : '#dfe4ea',
+                  }}
+                >
+                  <span className="chart-value">
+                    {value}
+                    <span className="visually-hidden"> minuti</span>
+                  </span>
+                </div>
               </div>
               <div className="chart-label">{stats.lastWeekSessions.labels[index]}</div>
             </div>
           ))}
         </div>
-      </div>
+      </figure>
     );
   };
 
@@ -222,34 +244,67 @@ function Statistics() {
     <div className="statistics-container">
       <div className="container">
         <div className="statistics-header">
-          <h2>Statistiche di studio</h2>
-          
-          <div className="time-range-selector">
-            <button 
-              className={`time-button ${timeRange === 'week' ? 'active' : ''}`}
-              onClick={() => setTimeRange('week')}
-            >
-              Ultima settimana
-            </button>
-            <button 
-              className={`time-button ${timeRange === 'month' ? 'active' : ''}`}
-              onClick={() => setTimeRange('month')}
-            >
-              Ultimo mese
-            </button>
-            <button 
-              className={`time-button ${timeRange === 'all' ? 'active' : ''}`}
-              onClick={() => setTimeRange('all')}
-            >
-              Tutto il tempo
-            </button>
+          <h1 className="h2 mb-0">Statistiche di studio</h1>
+
+          <div className="time-range-selector" role="group" aria-label="Periodo da analizzare">
+            {[
+              { key: 'week', label: 'Ultima settimana' },
+              { key: 'month', label: 'Ultimo mese' },
+              { key: 'all', label: 'Tutto il tempo' },
+            ].map(({ key, label }) => (
+              <button
+                key={key}
+                type="button"
+                className={`time-button ${timeRange === key ? 'active' : ''}`}
+                aria-pressed={timeRange === key}
+                onClick={() => setTimeRange(key)}
+              >
+                {label}
+              </button>
+            ))}
           </div>
         </div>
 
         {stats.totalSessions === 0 ? (
-          <div className="empty-state">
-            <p>Non ci sono dati sufficienti per mostrare le statistiche.</p>
-            <p>Inizia a registrare le tue sessioni di studio!</p>
+          /*
+            First-use state. It describes the three views this page builds
+            once there is data; it deliberately shows no numbers, no sample
+            chart and no placeholder bars, so nothing here can be mistaken
+            for real statistics.
+          */
+          <div className="stats-empty">
+            <span className="stats-empty__icon" aria-hidden="true">
+              <FaChartBar size={26} />
+            </span>
+            <h2 className="stats-empty__title">
+              {timeRange === 'all'
+                ? 'Ancora nessuna statistica'
+                : 'Nessuna sessione in questo periodo'}
+            </h2>
+            <p className="stats-empty__text">
+              {timeRange === 'all'
+                ? 'Le statistiche si costruiscono dalle sessioni di studio che registri. Appena ne aggiungi la prima, qui troverai:'
+                : 'Non ci sono sessioni nel periodo selezionato. Prova ad ampliarlo, oppure aggiungi una sessione. Qui troverai:'}
+            </p>
+
+            <ul className="stats-empty__list">
+              <li>
+                <FaRegClock aria-hidden="true" />
+                <span>Il tempo totale dedicato allo studio e la media giornaliera</span>
+              </li>
+              <li>
+                <FaChartBar aria-hidden="true" />
+                <span>L’andamento dei minuti di studio negli ultimi 7 giorni</span>
+              </li>
+              <li>
+                <FaBookOpen aria-hidden="true" />
+                <span>La distribuzione del tempo fra i tuoi corsi</span>
+              </li>
+            </ul>
+
+            <Link to="/study-sessions" className="btn btn-primary btn-lg">
+              Aggiungi una sessione di studio
+            </Link>
           </div>
         ) : (
           <>
@@ -271,32 +326,45 @@ function Statistics() {
             {renderWeeklyChart()}
 
             <div className="course-stats">
-              <h3>Distribuzione del tempo per corso</h3>
-              
-              {stats.courseStats.map(course => (
-                <div className="course-stat-item" key={course.id}>
-                  <div className="course-info">
-                    <h4>{course.name}</h4>
-                    <div className="course-details">
-                      <span>{formatTime(course.minutes)}</span>
-                      <span>•</span>
-                      <span>{course.sessions} sessioni</span>
+              <h2 className="h5">Distribuzione del tempo per corso</h2>
+
+              {stats.courseStats.length === 0 ? (
+                <p className="text-body-secondary mb-0">
+                  Le sessioni registrate non sono collegate a nessun corso esistente.
+                </p>
+              ) : (
+                stats.courseStats.map((course) => {
+                  const percent = calculatePercentage(course.minutes);
+                  return (
+                    <div className="course-stat-item" key={course.id}>
+                      <div className="course-info">
+                        <h3 className="h6 mb-1">{course.name}</h3>
+                        <div className="course-details">
+                          <span>{formatTime(course.minutes)}</span>
+                          <span aria-hidden="true">•</span>
+                          <span>
+                            {course.sessions} {course.sessions === 1 ? 'sessione' : 'sessioni'}
+                          </span>
+                        </div>
+                      </div>
+                      <div
+                        className="progress-bar-container"
+                        role="progressbar"
+                        aria-label={`Quota di tempo dedicata a ${course.name}`}
+                        aria-valuenow={Number(percent.toFixed(1))}
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                      >
+                        <div
+                          className="progress-bar"
+                          style={{ width: `${percent}%`, backgroundColor: course.color }}
+                        />
+                      </div>
+                      <div className="percentage">{percent.toFixed(1)}%</div>
                     </div>
-                  </div>
-                  <div className="progress-bar-container">
-                    <div 
-                      className="progress-bar" 
-                      style={{ 
-                        width: `${calculatePercentage(course.minutes)}%`,
-                        backgroundColor: course.color
-                      }}
-                    ></div>
-                  </div>
-                  <div className="percentage">
-                    {calculatePercentage(course.minutes).toFixed(1)}%
-                  </div>
-                </div>
-              ))}
+                  );
+                })
+              )}
             </div>
           </>
         )}

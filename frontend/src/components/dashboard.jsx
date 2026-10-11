@@ -1,154 +1,283 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Container, Row, Col, Card, Spinner } from 'react-bootstrap';
-import { FaClock, FaCoffee, FaTint } from 'react-icons/fa';
+import { Container, Row, Col, Card, Spinner, Button, Alert } from 'react-bootstrap';
+import { FaClock, FaRegLightbulb, FaTint, FaClipboardList, FaPlus } from 'react-icons/fa';
 import axios from '../services/api';
+import Onboarding from './Onboarding';
+import SyllabusImportModal from './SyllabusImportModal';
+import { courseIdOf, courseOf } from '../utils/sessions';
 import './dashboard.css';
 
 function Dashboard() {
   const [courses, setCourses] = useState([]);
   const [sessions, setSessions] = useState([]);
+  /** topicsByCourse: { [courseId]: { total, completed } } */
+  const [topicsByCourse, setTopicsByCourse] = useState({});
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [importFor, setImportFor] = useState(null); // course object, or 'any'
+
+  const load = useCallback(async () => {
+    try {
+      const [coursesRes, sessionsRes] = await Promise.all([
+        axios.get('/api/courses'),
+        axios.get('/api/study-sessions'),
+      ]);
+      const courseList = coursesRes.data || [];
+      setCourses(courseList);
+      setSessions(sessionsRes.data || []);
+
+      // Syllabus progress is the headline number of this product, so the
+      // dashboard reads the real topic lists rather than inferring progress
+      // from study minutes. There is no aggregate endpoint and Phase 2B must
+      // not add one, so this fans out over the (handful of) courses.
+      const topicResults = await Promise.all(
+        courseList.map((c) =>
+          axios
+            .get(`/api/topics/course/${c._id}`)
+            .then((r) => [c._id, r.data || []])
+            .catch(() => [c._id, []])
+        )
+      );
+      setTopicsByCourse(
+        Object.fromEntries(
+          topicResults.map(([id, topics]) => [
+            id,
+            { total: topics.length, completed: topics.filter((t) => t.completed).length },
+          ])
+        )
+      );
+      setError(null);
+    } catch (err) {
+      console.error('Errore nel caricamento della dashboard:', err);
+      setError('Non è stato possibile caricare i dati. Verifica che il server sia attivo.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    // Fetch courses
-    axios.get('/api/courses')
-      .then(response => {
-        setCourses(response.data);
-        setLoading(false);
-      })
-      .catch(error => {
-        console.error('Error fetching courses:', error);
-        setLoading(false);
-      });
+    load();
+  }, [load]);
 
-    // Fetch study sessions
-    axios.get('/api/study-sessions')
-      .then(response => {
-        setSessions(response.data);
-      })
-      .catch(error => {
-        console.error('Error fetching sessions:', error);
-      });
-  }, []);
-  
-  // Sessioni di oggi 
-  const todaySessions = sessions.filter(session => {
-    const sessionDate = new Date(session.date);
-    const today = new Date();
-    return sessionDate.setHours(0,0,0,0) === today.setHours(0,0,0,0);
-  });
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const endOfToday = new Date(startOfToday);
+  endOfToday.setDate(endOfToday.getDate() + 1);
 
-  // Sessioni future (prossimi impegni)
-  const upcomingSessions = sessions.filter(session => {
-    const sessionDate = new Date(session.date);
-    const today = new Date();
-    return sessionDate > today;
-  }).sort((a, b) => new Date(a.date) - new Date(b.date)).slice(0, 3);
+  const todaySessions = sessions
+    .filter((s) => {
+      const d = new Date(s.date);
+      return d >= startOfToday && d < endOfToday;
+    })
+    .sort((a, b) => new Date(a.date) - new Date(b.date));
 
-  // Calcola progresso per corso
-  const courseProgress = courses.map(course => {
-    const courseSessions = sessions.filter(session => session.course === course._id);
-    const totalMinutes = courseSessions.reduce((total, session) => total + (session.duration || 0), 0);
+  const upcomingSessions = sessions
+    .filter((s) => new Date(s.date) >= endOfToday)
+    .sort((a, b) => new Date(a.date) - new Date(b.date))
+    .slice(0, 3);
+
+  const nameOfCourse = (session) => courseOf(session, courses)?.name || 'Corso non specificato';
+
+  // Study time per course. `courseIdOf` is what makes this work at all: the
+  // API populates `session.course` into an object, and the old `===` test
+  // against an id string meant every course showed 0 minuti / 0 sessioni.
+  const studyTime = courses
+    .map((course) => {
+      const own = sessions.filter((s) => courseIdOf(s) === course._id);
+      return {
+        ...course,
+        totalMinutes: own.reduce((t, s) => t + (s.duration || 0), 0),
+        sessionsCount: own.length,
+      };
+    })
+    .filter((c) => c.totalMinutes > 0)
+    .sort((a, b) => b.totalMinutes - a.totalMinutes);
+
+  const maxMinutes = studyTime.length ? studyTime[0].totalMinutes : 0;
+
+  const syllabusProgress = courses.map((course) => {
+    const { total = 0, completed = 0 } = topicsByCourse[course._id] || {};
     return {
       ...course,
-      totalMinutes,
-      sessionsCount: courseSessions.length
+      topicsTotal: total,
+      topicsDone: completed,
+      percent: total > 0 ? Math.round((completed / total) * 100) : 0,
     };
-  }).sort((a, b) => b.totalMinutes - a.totalMinutes).slice(0, 3);
+  });
 
-  // Mostra spinner di caricamento
+  const coursesWithoutSyllabus = syllabusProgress.filter((c) => c.topicsTotal === 0);
+
+  const formatMinutes = (m) => {
+    const h = Math.floor(m / 60);
+    const min = m % 60;
+    if (h === 0) return `${min} min`;
+    return min === 0 ? `${h} h` : `${h} h ${min} min`;
+  };
+
   if (loading) {
     return (
-      <Container className="d-flex justify-content-center align-items-center" style={{ minHeight: "50vh" }}>
+      <Container className="d-flex justify-content-center align-items-center" style={{ minHeight: '50vh' }}>
         <div className="text-center">
           <Spinner animation="border" role="status" variant="primary">
-            <span className="visually-hidden">Caricamento...</span>
+            <span className="visually-hidden">Caricamento…</span>
           </Spinner>
-          <p className="mt-3 text-muted">Caricamento dashboard...</p>
+          <p className="mt-3 text-body-secondary">Caricamento dashboard…</p>
         </div>
+      </Container>
+    );
+  }
+
+  // ── First run: no courses yet ──────────────────────────────────────────
+  if (!error && courses.length === 0) {
+    return (
+      <Container className="dashboard-container py-4">
+        <Onboarding />
       </Container>
     );
   }
 
   return (
     <Container className="dashboard-container py-4">
-      <div className="d-flex justify-content-between align-items-center mb-4">
+      <div className="dashboard-header">
         <h1 className="dashboard-title">Dashboard</h1>
-        <div className="action-buttons">
-          <Link to="/study-sessions" className="btn btn-primary me-2">
-            <i className="me-2">+</i> Nuova Sessione
+        <div className="dashboard-actions">
+          <Button variant="primary" onClick={() => setImportFor('any')}>
+            <FaClipboardList className="me-2" aria-hidden="true" />
+            Incolla un programma
+          </Button>
+          <Link to="/courses?nuovo=1" className="btn btn-outline-primary">
+            <FaPlus className="me-2" aria-hidden="true" />
+            Nuovo corso
           </Link>
-          <Link to="/courses" className="btn btn-outline-primary">
-            <i className="me-2">+</i> Nuova Materia
+          <Link to="/study-sessions" className="btn btn-outline-secondary">
+            Nuova sessione
           </Link>
         </div>
       </div>
-      
+
+      {error && (
+        <Alert variant="danger" role="alert">
+          {error}
+        </Alert>
+      )}
+
+      {/* Nudge toward the core flow for any course that still has no syllabus. */}
+      {coursesWithoutSyllabus.length > 0 && (
+        <Alert variant="info" className="dashboard-nudge">
+          <div>
+            <strong>
+              {coursesWithoutSyllabus.length === 1
+                ? '1 corso non ha ancora un programma.'
+                : `${coursesWithoutSyllabus.length} corsi non hanno ancora un programma.`}
+            </strong>{' '}
+            Incollalo per ottenere la lista degli argomenti da spuntare.
+          </div>
+          <Button
+            variant="primary"
+            size="sm"
+            className="flex-shrink-0"
+            onClick={() => setImportFor(coursesWithoutSyllabus[0])}
+          >
+            Incolla il programma
+          </Button>
+        </Alert>
+      )}
+
       <Row>
         <Col lg={8}>
           <Card className="mb-4 shadow-sm">
             <Card.Header>
-              <h5 className="m-0">Il tuo programma di oggi</h5>
+              <h2 className="h6 m-0">Il tuo programma di oggi</h2>
             </Card.Header>
             <Card.Body className="p-0">
               {todaySessions.length > 0 ? (
                 <div className="schedule-table">
-                  <div className="schedule-header">
+                  <div className="schedule-header" aria-hidden="true">
                     <div className="schedule-cell">Ora</div>
                     <div className="schedule-cell">Materia</div>
                     <div className="schedule-cell">Durata</div>
                     <div className="schedule-cell">Stato</div>
                   </div>
-                  {todaySessions.map(session => (
+                  {todaySessions.map((session) => (
                     <div className="schedule-row" key={session._id}>
-                      <div className="schedule-cell">
-                        {new Date(session.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      {/* Each value is wrapped in a single element so that on
+                          mobile, where the cell becomes a flex row with a
+                          generated label, the whole value stays one item. */}
+                      <div className="schedule-cell" data-label="Ora">
+                        <span className="schedule-value">
+                          {new Date(session.date).toLocaleTimeString('it-IT', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </span>
                       </div>
-                      <div className="schedule-cell">
-                        {session.course ? courses.find(c => c._id === session.course)?.name || 'Corso' : 'Corso non specificato'}
+                      <div className="schedule-cell schedule-cell--subject" data-label="Materia">
+                        <span className="schedule-value">
+                          {nameOfCourse(session)}
+                          {session.topic && (
+                            <span className="schedule-topic"> — {session.topic}</span>
+                          )}
+                        </span>
                       </div>
-                      <div className="schedule-cell">
-                        {session.duration} min
+                      <div className="schedule-cell" data-label="Durata">
+                        <span className="schedule-value">{session.duration} min</span>
                       </div>
-                      <div className="schedule-cell">
-                        <span className="status-badge pending">In programma</span>
+                      <div className="schedule-cell" data-label="Stato">
+                        <span className="schedule-value">
+                          <span className="status-badge pending">In programma</span>
+                        </span>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
                 <div className="empty-schedule">
-                  <p>Non hai sessioni programmate per oggi</p>
+                  <p className="mb-2">Non hai sessioni programmate per oggi.</p>
+                  <Link to="/study-sessions" className="link-highlight">
+                    Pianifica una sessione
+                  </Link>
                 </div>
               )}
             </Card.Body>
           </Card>
-          
+
           <Card className="mb-4 shadow-sm">
-            <Card.Header className="d-flex justify-content-between align-items-center">
-              <h5 className="m-0">Prossimi impegni</h5>
-              <Link to="/calendar" className="see-all-link">Vedi tutti</Link>
+            <Card.Header className="d-flex justify-content-between align-items-center gap-2 flex-wrap">
+              <h2 className="h6 m-0">Prossimi impegni</h2>
+              <Link to="/calendar" className="see-all-link">
+                Vedi tutti
+              </Link>
             </Card.Header>
             <Card.Body className="p-0">
               {upcomingSessions.length > 0 ? (
                 <div className="upcoming-list">
-                  {upcomingSessions.map(session => (
+                  {upcomingSessions.map((session) => (
                     <div className="upcoming-item" key={session._id}>
-                      <div className="upcoming-date">
-                        <span className="day">{new Date(session.date).toLocaleDateString([], {day: 'numeric'})}</span>
-                        <span className="month">{new Date(session.date).toLocaleDateString([], {month: 'short'})}</span>
+                      <div className="upcoming-date" aria-hidden="true">
+                        <span className="day">
+                          {new Date(session.date).toLocaleDateString('it-IT', { day: 'numeric' })}
+                        </span>
+                        <span className="month">
+                          {new Date(session.date).toLocaleDateString('it-IT', { month: 'short' })}
+                        </span>
                       </div>
                       <div className="upcoming-details">
-                        <h6>{session.topic || 'Sessione di studio'}</h6>
+                        <h3 className="h6 mb-1">{session.topic || 'Sessione di studio'}</h3>
                         <div className="upcoming-info">
                           <span>
-                            <FaClock className="me-1" size={12} />
-                            {new Date(session.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            <FaClock className="me-1" size={12} aria-hidden="true" />
+                            <span className="visually-hidden">Data e ora: </span>
+                            {new Date(session.date).toLocaleDateString('it-IT', {
+                              day: 'numeric',
+                              month: 'long',
+                            })}
+                            , {new Date(session.date).toLocaleTimeString('it-IT', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
                           </span>
-                          <span>
-                            {session.course ? courses.find(c => c._id === session.course)?.name || 'Corso' : 'Corso non specificato'}
-                          </span>
+                          <span>{nameOfCourse(session)}</span>
                         </div>
                       </div>
                     </div>
@@ -156,74 +285,149 @@ function Dashboard() {
                 </div>
               ) : (
                 <div className="empty-upcoming">
-                  <p>Non hai prossimi impegni programmati</p>
+                  <p className="mb-0">Non hai prossimi impegni programmati.</p>
                 </div>
               )}
             </Card.Body>
           </Card>
         </Col>
-        
+
         <Col lg={4}>
+          {/* The product's core metric: how much of each syllabus is done. */}
           <Card className="mb-4 shadow-sm">
             <Card.Header>
-              <h5 className="m-0">Progresso materie</h5>
+              <h2 className="h6 m-0">Progresso del programma</h2>
             </Card.Header>
             <Card.Body className="p-0">
-              {courseProgress.length > 0 ? (
-                <div className="courses-progress">
-                  {courseProgress.map(course => (
-                    <Link to={`/courses/${course._id}`} key={course._id} className="course-progress-item">
-                      <h6>{course.name}</h6>
-                      <div className="progress mb-2" style={{height: '6px'}}>
-                        <div 
-                          className="progress-bar" 
-                          role="progressbar" 
+              <div className="courses-progress">
+                {syllabusProgress.map((course) =>
+                  course.topicsTotal > 0 ? (
+                    <Link
+                      to={`/courses/${course._id}`}
+                      key={course._id}
+                      className="course-progress-item"
+                    >
+                      <h3 className="h6 mb-2">{course.name}</h3>
+                      <div
+                        className="progress mb-2"
+                        style={{ height: '8px' }}
+                        role="progressbar"
+                        aria-label={`Avanzamento di ${course.name}`}
+                        aria-valuenow={course.percent}
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                      >
+                        <div
+                          className="progress-bar"
                           style={{
-                            width: `${Math.min(course.totalMinutes / 500 * 100, 100)}%`,
-                            backgroundColor: course.color || '#3a7bd5'
+                            width: `${course.percent}%`,
+                            backgroundColor: course.color || '#3a7bd5',
                           }}
-                        ></div>
+                        />
                       </div>
-                      <div className="d-flex justify-content-between small text-muted">
-                        <span>{course.totalMinutes} minuti</span>
-                        <span>{course.sessionsCount} sessioni</span>
+                      <div className="d-flex justify-content-between small text-body-secondary">
+                        <span>
+                          {course.topicsDone} di {course.topicsTotal} argomenti
+                        </span>
+                        <span>{course.percent}%</span>
                       </div>
                     </Link>
+                  ) : (
+                    <div className="course-progress-item course-progress-item--empty" key={course._id}>
+                      <h3 className="h6 mb-1">{course.name}</h3>
+                      <p className="small text-body-secondary mb-2">
+                        Nessun programma importato.
+                      </p>
+                      <Button
+                        variant="outline-primary"
+                        size="sm"
+                        onClick={() => setImportFor(course)}
+                      >
+                        Incolla il programma
+                      </Button>
+                    </div>
+                  )
+                )}
+              </div>
+            </Card.Body>
+          </Card>
+
+          <Card className="mb-4 shadow-sm">
+            <Card.Header>
+              <h2 className="h6 m-0">Tempo di studio per corso</h2>
+            </Card.Header>
+            <Card.Body className="p-0">
+              {studyTime.length > 0 ? (
+                <div className="courses-progress">
+                  {studyTime.map((course) => (
+                    <div className="course-progress-item" key={course._id}>
+                      <h3 className="h6 mb-2">{course.name}</h3>
+                      {/* Bars are scaled against the most-studied course, so
+                          they compare courses honestly instead of against an
+                          invented target. */}
+                      <div className="progress mb-2" style={{ height: '8px' }} aria-hidden="true">
+                        <div
+                          className="progress-bar"
+                          style={{
+                            width: `${maxMinutes ? (course.totalMinutes / maxMinutes) * 100 : 0}%`,
+                            backgroundColor: course.color || '#3a7bd5',
+                          }}
+                        />
+                      </div>
+                      <div className="d-flex justify-content-between small text-body-secondary">
+                        <span>{formatMinutes(course.totalMinutes)}</span>
+                        <span>
+                          {course.sessionsCount}{' '}
+                          {course.sessionsCount === 1 ? 'sessione' : 'sessioni'}
+                        </span>
+                      </div>
+                    </div>
                   ))}
                 </div>
               ) : (
                 <div className="empty-courses">
-                  <p>Aggiungi corsi per vedere i tuoi progressi</p>
-                  <Link to="/courses" className="btn btn-sm btn-primary">
-                    Aggiungi Corso
+                  <p className="mb-2">Non hai ancora registrato sessioni di studio.</p>
+                  <Link to="/study-sessions" className="btn btn-sm btn-primary">
+                    Registra una sessione
                   </Link>
                 </div>
               )}
             </Card.Body>
           </Card>
-          
+
+          {/*
+            The previous version of this card announced "Pausa caffè —
+            consigliata tra 25 minuti", a hardcoded countdown tied to nothing.
+            These are plain study tips: true as written, with no invented state.
+          */}
           <Card className="mb-4 shadow-sm">
             <Card.Header>
-              <h5 className="m-0">Benessere</h5>
+              <h2 className="h6 m-0">Consigli di studio</h2>
             </Card.Header>
             <Card.Body>
               <div className="wellness-tips">
                 <div className="wellness-tip">
-                  <div className="wellness-icon coffee">
-                    <FaCoffee size={20} />
+                  <div className="wellness-icon coffee" aria-hidden="true">
+                    <FaRegLightbulb size={20} />
                   </div>
                   <div className="wellness-content">
-                    <h6>Pausa caffè</h6>
-                    <p>Consigliata tra 25 minuti</p>
+                    <h3 className="h6 mb-1">Studia a blocchi</h3>
+                    <p className="mb-0">
+                      Cicli da 25 minuti con pause brevi aiutano a mantenere la concentrazione.{' '}
+                      <Link to="/pomodoro" className="link-highlight">
+                        Usa il timer Pomodoro
+                      </Link>
+                      .
+                    </p>
                   </div>
                 </div>
                 <div className="wellness-tip">
-                  <div className="wellness-icon water">
+                  <div className="wellness-icon water" aria-hidden="true">
                     <FaTint size={20} />
                   </div>
                   <div className="wellness-content">
-                    <h6>Idratazione</h6>
-                    <p>Ricordati di bere dell'acqua</p>
+                    <h3 className="h6 mb-1">Idratazione</h3>
+                    <p className="mb-0">Tieni una bottiglia d’acqua sulla scrivania.</p>
                   </div>
                 </div>
               </div>
@@ -231,6 +435,15 @@ function Dashboard() {
           </Card>
         </Col>
       </Row>
+
+      <SyllabusImportModal
+        show={importFor !== null}
+        onHide={() => setImportFor(null)}
+        courseId={importFor && importFor !== 'any' ? importFor._id : undefined}
+        courseName={importFor && importFor !== 'any' ? importFor.name : undefined}
+        courses={courses}
+        onImported={() => load()}
+      />
     </Container>
   );
 }
