@@ -171,9 +171,7 @@ concept and the initial layout and UX were developed jointly with **Matteo Socca
 
 | | |
 |---|---|
-| Application code | Mariia Sarbash designed the software architecture and delivered 
-the full-stack application using AI-assisted development tools. 
-She independently created and presented the project pitch at Bending Spoons HQ. |
+| Application code | Mariia Sarbash designed the software architecture and delivered the full-stack application using AI-assisted development tools. She independently created and presented the project pitch at Bending Spoons HQ. |
 | Presentation (12 slides) and its delivery | Mariia Sarbash |
 | Survey design, distribution and analysis | Mariia Sarbash and Matteo Soccali — together, ~50/50 |
 | Product concept, initial layout and UX | Mariia Sarbash and Matteo Soccali — together |
