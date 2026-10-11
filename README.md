@@ -81,12 +81,9 @@ priorities, and proposing a realistic study schedule.
 The plan was meant to adapt — to different exam dates, to personal commitments, and to the
 student's progress over time.
 
-The intelligent multi-exam planning engine was not implemented. Instead, the first prototype 
-delivered supporting features for course organization, progress tracking and study sessions.
-
-For the first prototype we implemented a narrower set
-of supporting features: course management, pasted syllabi converted into topic checklists, visible
-progress, study sessions, a calendar and a Pomodoro timer.
+**The intelligent multi-exam planning engine was never implemented.** What the first prototype
+delivered instead was the supporting layer around it: course management, pasted syllabi converted
+into topic checklists, visible progress, study sessions, a calendar and a Pomodoro timer.
 
 ## What was actually built
 
@@ -165,14 +162,15 @@ itself is dated 25 June 2025 on slide 1.
 
 ## Team & contributions
 
-MyStudy was created and built by **Mariia Sarbash**, who wrote the application, produced the project
-presentation, and presented it at Bending Spoons HQ on 25 June 2025. The research, the product
-concept and the initial layout and UX were developed jointly with **Matteo Soccali**.
+**Mariia Sarbash** co-developed the research and the product concept with **Matteo Soccali**,
+designed the software architecture, led the full-stack implementation using AI-assisted development
+tools, and independently created and delivered the presentation at Bending Spoons HQ on
+25 June 2025.
 
 | | |
 |---|---|
-| Application code | Mariia Sarbash designed the software architecture and delivered the full-stack application using AI-assisted development tools. She independently created and presented the project pitch at Bending Spoons HQ. |
-| Presentation (12 slides) and its delivery | Mariia Sarbash |
+| Software architecture and full-stack implementation | Mariia Sarbash — led the build, using AI-assisted development tools |
+| Presentation (12 slides) and its delivery | Mariia Sarbash — created and delivered independently |
 | Survey design, distribution and analysis | Mariia Sarbash and Matteo Soccali — together, ~50/50 |
 | Product concept, initial layout and UX | Mariia Sarbash and Matteo Soccali — together |
 
