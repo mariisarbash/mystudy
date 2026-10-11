@@ -81,7 +81,10 @@ priorities, and proposing a realistic study schedule.
 The plan was meant to adapt — to different exam dates, to personal commitments, and to the
 student's progress over time.
 
-**That is the concept. None of it was built.** For the first prototype we implemented a narrower set
+The intelligent multi-exam planning engine was not implemented. Instead, the first prototype 
+delivered supporting features for course organization, progress tracking and study sessions.
+
+For the first prototype we implemented a narrower set
 of supporting features: course management, pasted syllabi converted into topic checklists, visible
 progress, study sessions, a calendar and a Pomodoro timer.
 
@@ -168,7 +171,9 @@ concept and the initial layout and UX were developed jointly with **Matteo Socca
 
 | | |
 |---|---|
-| Application code | Mariia Sarbash — 100% |
+| Application code | Mariia Sarbash designed the software architecture and delivered 
+the full-stack application using AI-assisted development tools. 
+She independently created and presented the project pitch at Bending Spoons HQ. |
 | Presentation (12 slides) and its delivery | Mariia Sarbash |
 | Survey design, distribution and analysis | Mariia Sarbash and Matteo Soccali — together, ~50/50 |
 | Product concept, initial layout and UX | Mariia Sarbash and Matteo Soccali — together |
